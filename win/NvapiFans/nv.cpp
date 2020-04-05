@@ -182,7 +182,6 @@ int NvApiClient::getExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle) {
 	return hexToPercent(speed_hex);
 }
 
-
 int NvApiClient::getExternalFanSpeedRPM(NV_PHYSICAL_GPU_HANDLE& handle, int nb) {
 	bool res;
 	int reg = 0;
@@ -220,7 +219,7 @@ bool NvApiClient::getTemps(NV_PHYSICAL_GPU_HANDLE& handle, NV_GPU_THERMAL_SETTIN
 	if (status != 0) {
 		std::string message;
 		getNvAPIError(status, message);
-		std::cerr << "Error calling NvAPI_SYS_GetChipSetInfo: " << message << std::endl;
+		std::cerr << "Error calling NvAPI_GPU_GetThermalSettings: " << message << std::endl;
 		return false;
 	};
 	return true;
