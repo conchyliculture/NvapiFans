@@ -206,7 +206,7 @@ bool NvApiClient::setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle, int
 
 	byte hex_val = percentToHex(percent);
 
-	res = I2CWriteByteEx(handle, 0x2a, 0x41, hex_val);
+	res = I2CWriteByteEx(handle, I2C_EXTFAN_DEVICE_ADDRESS, I2C_EXTFAN_SPEED_CMD_REGISTER, hex_val);
 	if (!res) {
 		return false;
 	}
