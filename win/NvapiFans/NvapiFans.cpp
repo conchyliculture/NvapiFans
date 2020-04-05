@@ -3,10 +3,11 @@
 #include "nv.h"
 #include "NvapiFans.h"
 
-
+// Displays information for a specific gpu handle.
 bool showGPUInfos(NvApiClient api, NV_PHYSICAL_GPU_HANDLE gpu) {
 	bool res;
 	std::string gpu_name;
+
 	res = api.getGPUFullname(gpu, gpu_name);
 
 	int speedCmd = 0;
@@ -45,18 +46,17 @@ bool showGPUInfos(NvApiClient api, NV_PHYSICAL_GPU_HANDLE gpu) {
 	return res;
 }
 
+// Collects the list of GPU handles, and will display informations related to them.
+// If gpuId is anything >= 0, will only show info for this one.
 bool showAllGPUsInfos(NvApiClient api, int gpuId) {
-	std::string version;
-	bool res;
-	res = api.showVersion(version);
-	if (!res) {
-		printf("Failed to get Nvapi version\n");
-		return res;
+	bool res = true;
+	if (gpuId < 0 || gpuId > NVAPI_MAX_PHYSICAL_GPUS) {
+		std::cerr << "Invalid gpu id: " << gpuId;
+		return false;
 	}
 
-	std::cout << "Nvapi version:" << version << std::endl;
 	std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu;
-	res |= api.getGPUHandles(list_gpu);
+	res &= api.getGPUHandles(list_gpu);
 	if (!res) {
 		printf("Failed to list GPUs\n");
 		return res;
@@ -72,7 +72,7 @@ bool showAllGPUsInfos(NvApiClient api, int gpuId) {
 	int index = 0;
 	for (NV_PHYSICAL_GPU_HANDLE gpu : list_gpu) {
 		if (gpuId < 0 || index == gpuId) {
-			res |= showGPUInfos(api, gpu);
+			res &= showGPUInfos(api, gpu);
 		}
 		index += 1;
 	}
@@ -81,6 +81,7 @@ bool showAllGPUsInfos(NvApiClient api, int gpuId) {
 
 int main(int argc, char* argv[])
 {
+	bool res = false;
 	try
 	{
 		cxxopts::Options options(argv[0], "Tool to monitor Nvdia GPU fan speeds.\n");
@@ -94,26 +95,36 @@ int main(int argc, char* argv[])
 			;
 
 		auto result = options.parse(argc, argv);
-		int gpu = 0;
-		
-		if (result.count("gpu")) {
-			gpu = result["gpu"].as<int>();
-		}
-		NvApiClient api;
+		int gpuId = 0;
 
-		std::cout << gpu << std::endl;
 		if (result.count("help")) {
 			std::cout << options.help() << std::endl;
 			return 0;
 		}
 
-		if (result.count("list")) {
+		if (result.count("gpu")) {
+			gpuId = result["gpu"].as<int>();
+		}
 
+		NvApiClient api;
+		if (result.count("debug")) {
+			std::string version;
+
+			res = api.showVersion(version);
+			if (!res) {
+				printf("Failed to get Nvapi version\n");
+				return res;
+			}
+			std::cout << "Nvapi version:" << version << std::endl;
+		}
+
+		if (result.count("list")) {
+			bool res = showAllGPUsInfos(api, gpuId);
+			return res;
 		};
 
-		// No argument: list all GPUs
-
-		bool res = showAllGPUsInfos(api, gpu);
+		// No argument: show info all GPUs
+		bool res = showAllGPUsInfos(api, gpuId);
 		return res;
 	}
 	catch (const cxxopts::OptionException& e)
