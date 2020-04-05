@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <iostream>
 #include <vector>
+#include <math.h>       /* ceil & floor */
 #include "nv.h"
 
 NvApiClient::NvApiClient() {
@@ -44,10 +45,10 @@ NvApiClient::NvApiClient() {
 }
 
 int NvApiClient::hexToPercent(byte hex) {
-	return (hex * 100) / 0xFF;
+	return (int)floor((hex * 100.0) / 0xFF);
 };
 int NvApiClient::percentToHex(byte hex) {
-	return (hex * 0xFF) / 100;
+	return (int)ceil(((int)hex * 0xFF) / 100.0);
 };
 
 void NvApiClient::getNvAPIError(NvAPI_Status status, std::string message) {

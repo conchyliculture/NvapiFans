@@ -50,10 +50,6 @@ bool showGPUInfos(NvApiClient api, NV_PHYSICAL_GPU_HANDLE gpu) {
 // If gpuId is anything >= 0, will only show info for this one.
 bool showAllGPUsInfos(NvApiClient api, int gpuId) {
 	bool res = true;
-	if (gpuId < 0 || gpuId > NVAPI_MAX_PHYSICAL_GPUS) {
-		std::cerr << "Invalid gpu id: " << gpuId;
-		return false;
-	}
 
 	std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu;
 	res &= api.getGPUHandles(list_gpu);
@@ -62,9 +58,8 @@ bool showAllGPUsInfos(NvApiClient api, int gpuId) {
 		return res;
 	}
 
-	if (list_gpu.size() == 0) {
-		std::cout << "Could not detect any NVidia GPU." << std::endl;
-		return 0;
+	if (!validateGPUId(list_gpu, gpuId)) {
+		return false;
 	}
 
 	std::cout << "Found " << list_gpu.size() << " NVidia GPUs." << std::endl;
@@ -76,6 +71,55 @@ bool showAllGPUsInfos(NvApiClient api, int gpuId) {
 		}
 		index += 1;
 	}
+	return res;
+}
+
+bool validateGPUId(std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu, int gpuId) {
+	if (gpuId < -1 || gpuId > NVAPI_MAX_PHYSICAL_GPUS) {
+		std::cerr << "Invalid gpu id: " << gpuId;
+		return false;
+	}
+	if (list_gpu.size() == 0) {
+		std::cout << "Could not detect any NVidia GPU." << std::endl;
+		return false;
+	}
+
+	if (gpuId > 0 && gpuId >= list_gpu.size()) {
+		std::cerr << "GPU id provided is " << gpuId << ". Max GPU id is " << list_gpu.size() - 1 << std::endl;
+		return false;
+	}
+	return true;
+}
+
+bool setExternalFanSpeed(NvApiClient api, int gpuId, int percent) {
+	bool res;
+	std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu;
+
+	if (percent < 0 || percent >100) {
+		std::cerr << "Fan speed needs to be between 0 and 100" << std::endl;
+		return false;
+	}
+
+	res = api.getGPUHandles(list_gpu);
+	if (!res) {
+		std::cerr << "Failed to list GPUs" << std::endl;
+		return false;
+	}
+	if (!validateGPUId(list_gpu, gpuId)) {
+		return false;
+	}
+
+	int index = 0;
+	for (NV_PHYSICAL_GPU_HANDLE gpu : list_gpu) {
+		if (gpuId < 0 || index == gpuId) {
+			res &= api.setExternalFanSpeedPercent(gpu, percent);
+		}
+		index += 1;
+	}
+	
+
+	res &= api.setExternalFanSpeedPercent(list_gpu.at(gpuId), percent);
+	
 	return res;
 }
 
@@ -91,6 +135,7 @@ int main(int argc, char* argv[])
 			.add_options()
 			("h,help", "Print help")
 			("l,list", "List GPUs")
+			("e,external", "Set external fan speed (in %)", cxxopts::value<int>())
 			("g,gpu", "Set target GPU id (-1 is 'all GPUs')", cxxopts::value<int>())//->default_value("-1")->implicit_value("0"))
 			;
 
@@ -116,6 +161,11 @@ int main(int argc, char* argv[])
 				return res;
 			}
 			std::cout << "Nvapi version:" << version << std::endl;
+		}
+
+		if (result.count("external")) {
+			res = setExternalFanSpeed(api, gpuId, result["external"].as<int>());
+			return res;
 		}
 
 		if (result.count("list")) {
