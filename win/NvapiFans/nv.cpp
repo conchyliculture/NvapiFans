@@ -174,11 +174,30 @@ int NvApiClient::getExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle) {
 	bool res;
 	
 	NvU8 speed_hex;
-	res = I2CReadByteEx(handle, 0x2a, 0x41, &speed_hex);
+	res = I2CReadByteEx(handle, I2C_EXTFAN_DEVICE_ADDRESS, I2C_EXTFAN_SPEED_CMD_REGISTER, &speed_hex);
 	if (!res) {
 		return -1;
 	}
 	return hexToPercent(speed_hex);
+}
+
+
+int NvApiClient::getExternalFanSpeedRPM(NV_PHYSICAL_GPU_HANDLE& handle, int nb) {
+	bool res;
+	int reg = 0;
+	switch (nb) {
+	case 1: 
+		reg = I2C_EXTFAN1_SPEED_RPM_REGISTER; break;
+	case 2:
+		reg = I2C_EXTFAN2_SPEED_RPM_REGISTER; break;
+	}
+
+	NvU8 speed_rpm;
+	res = I2CReadByteEx(handle, I2C_EXTFAN_DEVICE_ADDRESS, reg, &speed_rpm);
+	if (!res) {
+		return -1;
+	}
+	return speed_rpm * 30;
 }
 
 bool NvApiClient::setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle, int percent) {
@@ -192,3 +211,4 @@ bool NvApiClient::setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle, int
 	}
 	return true;
 }
+

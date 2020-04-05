@@ -142,6 +142,7 @@
     <ClCompile Include="nv.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="cxxopts.hpp" />
     <ClInclude Include="NvapiFans.h" />
     <ClInclude Include="nv.h" />
   </ItemGroup>

@@ -214,6 +214,13 @@ typedef NvAPI_Status(*NvAPI_I2CReadEx_t)(NV_PHYSICAL_GPU_HANDLE hPhysicalGpu, NV
 typedef NvAPI_Status(*NvAPI_I2CWriteEx_t)(NV_PHYSICAL_GPU_HANDLE hPhysicalGpu, NV_I2C_INFO* pI2cInfo, NvU32* unknown); // No idea what unknown is
 
 
+#define I2C_EXTFAN_DEVICE_ADDRESS 0x2a
+#define I2C_EXTFAN_SPEED_CMD_REGISTER 0x41
+#define I2C_EXTFAN1_SPEED_RPM_REGISTER 0x44
+#define I2C_EXTFAN2_SPEED_RPM_REGISTER 0x48
+#define I2C_GPU_VRM_TEMP_REGISTER 0x15
+
+
 class NvApiClient
 {
 private:
@@ -241,6 +248,7 @@ public:
 	bool getGPUHandles(std::vector<NV_PHYSICAL_GPU_HANDLE>& gpuHandles);
 	bool getGPUFullname(NV_PHYSICAL_GPU_HANDLE& handle, std::string& name);
     int getExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle);
+    int getExternalFanSpeedRPM(NV_PHYSICAL_GPU_HANDLE& handle, int nb);
     bool setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle, int percent);
 };
 
