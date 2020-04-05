@@ -31,6 +31,7 @@ NvApiClient::NvApiClient() {
 			NvAPI_GetErrorMessage = (NvAPI_GetErrorMessage_t)(*NvAPI_QueryInterface)(0x6C2D048C);
 			NvAPI_I2CReadEx = (NvAPI_I2CReadEx_t)(*NvAPI_QueryInterface)(0x4D7B0709);
 			NvAPI_I2CWriteEx = (NvAPI_I2CWriteEx_t)(*NvAPI_QueryInterface)(0x283AC65A);
+			NvAPI_GPU_GetThermalSettings = (NvAPI_GPU_GetThermalSettings_t)(*NvAPI_QueryInterface)(0xE3640A56);
 
 			NvAPI_Status res = NvAPI_Initialize();
 			success = (res == NVAPI_OK);
@@ -211,4 +212,18 @@ bool NvApiClient::setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle, int
 	}
 	return true;
 }
+
+bool NvApiClient::getTemps(NV_PHYSICAL_GPU_HANDLE& handle, NV_GPU_THERMAL_SETTINGS& infos) {
+	NvAPI_Status status;
+	infos.version = NV_GPU_THERMAL_SETTINGS_VER_2;
+	status = NvAPI_GPU_GetThermalSettings(handle, NVAPI_THERMAL_TARGET_ALL, &infos);
+	if (status != 0) {
+		std::string message;
+		getNvAPIError(status, message);
+		std::cerr << "Error calling NvAPI_SYS_GetChipSetInfo: " << message << std::endl;
+		return false;
+	};
+	return true;
+}
+
 

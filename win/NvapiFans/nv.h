@@ -156,6 +156,58 @@ typedef enum _NvAPI_Status
     NVAPI_FIRMWARE_REVISION_NOT_SUPPORTED = -200,    // The device's firmware is not supported.
 } NvAPI_Status;
 
+//! Used in NV_GPU_THERMAL_SETTINGS
+typedef enum
+{
+    NVAPI_THERMAL_TARGET_NONE = 0,
+    NVAPI_THERMAL_TARGET_GPU = 1,     //!< GPU core temperature requires NvPhysicalGpuHandle
+    NVAPI_THERMAL_TARGET_MEMORY = 2,     //!< GPU memory temperature requires NvPhysicalGpuHandle
+    NVAPI_THERMAL_TARGET_POWER_SUPPLY = 4,     //!< GPU power supply temperature requires NvPhysicalGpuHandle
+    NVAPI_THERMAL_TARGET_BOARD = 8,     //!< GPU board ambient temperature requires NvPhysicalGpuHandle
+    NVAPI_THERMAL_TARGET_VCD_BOARD = 9,     //!< Visual Computing Device Board temperature requires NvVisualComputingDeviceHandle
+    NVAPI_THERMAL_TARGET_VCD_INLET = 10,    //!< Visual Computing Device Inlet temperature requires NvVisualComputingDeviceHandle
+    NVAPI_THERMAL_TARGET_VCD_OUTLET = 11,    //!< Visual Computing Device Outlet temperature requires NvVisualComputingDeviceHandle
+
+    NVAPI_THERMAL_TARGET_ALL = 15,
+    NVAPI_THERMAL_TARGET_UNKNOWN = -1,
+} NV_THERMAL_TARGET;
+
+//! \ingroup gputhermal
+//! Used in NV_GPU_THERMAL_SETTINGS
+typedef enum
+{
+    NVAPI_THERMAL_CONTROLLER_NONE = 0,
+    NVAPI_THERMAL_CONTROLLER_GPU_INTERNAL,
+    NVAPI_THERMAL_CONTROLLER_ADM1032,
+    NVAPI_THERMAL_CONTROLLER_MAX6649,
+    NVAPI_THERMAL_CONTROLLER_MAX1617,
+    NVAPI_THERMAL_CONTROLLER_LM99,
+    NVAPI_THERMAL_CONTROLLER_LM89,
+    NVAPI_THERMAL_CONTROLLER_LM64,
+    NVAPI_THERMAL_CONTROLLER_ADT7473,
+    NVAPI_THERMAL_CONTROLLER_SBMAX6649,
+    NVAPI_THERMAL_CONTROLLER_VBIOSEVT,
+    NVAPI_THERMAL_CONTROLLER_OS,
+    NVAPI_THERMAL_CONTROLLER_UNKNOWN = -1,
+} NV_THERMAL_CONTROLLER;
+
+#define NVAPI_MAX_THERMAL_SENSORS_PER_GPU   3
+
+typedef struct
+{
+    NvU32   version;                //!< structure version
+    NvU32   count;                  //!< number of associated thermal sensors
+    struct
+    {
+        NV_THERMAL_CONTROLLER       controller;         //!< internal, ADM1032, MAX6649...
+        NvS32                       defaultMinTemp;     //!< Minimum default temperature value of the thermal sensor in degree Celsius
+        NvS32                       defaultMaxTemp;     //!< Maximum default temperature value of the thermal sensor in degree Celsius
+        NvS32                       currentTemp;        //!< Current temperature value of the thermal sensor in degree Celsius
+        NV_THERMAL_TARGET           target;             //!< Thermal sensor targeted - GPU, memory, chipset, powersupply, Visual Computing Device, etc
+    } sensor[NVAPI_MAX_THERMAL_SENSORS_PER_GPU];
+
+} NV_GPU_THERMAL_SETTINGS_V2;
+
 #define NVAPI_MAX_SIZEOF_I2C_DATA_BUFFER    4096
 #define NVAPI_MAX_SIZEOF_I2C_REG_ADDRESS       4
 #define NVAPI_DISPLAY_DEVICE_MASK_MAX         24
@@ -171,6 +223,9 @@ typedef enum
     NVAPI_I2C_SPEED_200KHZ,
     NVAPI_I2C_SPEED_400KHZ,
 } NV_I2C_SPEED;
+
+#define NV_GPU_THERMAL_SETTINGS_VER_2   MAKE_NVAPI_VERSION(NV_GPU_THERMAL_SETTINGS_V2, 2)
+typedef NV_GPU_THERMAL_SETTINGS_V2  NV_GPU_THERMAL_SETTINGS;
 
 //! Used in NvAPI_I2CRead() and NvAPI_I2CWrite()
 typedef struct
@@ -212,6 +267,7 @@ typedef NvAPI_Status(*NvAPI_GPU_GetFullName_t)(NV_PHYSICAL_GPU_HANDLE physical_g
 typedef NvAPI_Status(*NvAPI_GetErrorMessage_t)(NvAPI_Status nr, NvAPI_ShortString szDesc);
 typedef NvAPI_Status(*NvAPI_I2CReadEx_t)(NV_PHYSICAL_GPU_HANDLE hPhysicalGpu, NV_I2C_INFO* pI2cInfo, NvU32* unknown); // No idea what unknown is
 typedef NvAPI_Status(*NvAPI_I2CWriteEx_t)(NV_PHYSICAL_GPU_HANDLE hPhysicalGpu, NV_I2C_INFO* pI2cInfo, NvU32* unknown); // No idea what unknown is
+typedef NvAPI_Status(*NvAPI_GPU_GetThermalSettings_t)(NV_PHYSICAL_GPU_HANDLE hPhysicalGpu, NvU32 sensorIndex, NV_GPU_THERMAL_SETTINGS* pThermalSettings);
 
 
 #define I2C_EXTFAN_DEVICE_ADDRESS 0x2a
@@ -235,6 +291,7 @@ private:
     NvAPI_GetErrorMessage_t     NvAPI_GetErrorMessage = nullptr;
     NvAPI_I2CReadEx_t      NvAPI_I2CReadEx = nullptr;
     NvAPI_I2CWriteEx_t  NvAPI_I2CWriteEx = nullptr;
+    NvAPI_GPU_GetThermalSettings_t NvAPI_GPU_GetThermalSettings = nullptr;
 
     void getNvAPIError(NvAPI_Status status, std::string message);
     bool I2CReadByteEx(NV_PHYSICAL_GPU_HANDLE &gpu, byte deviceAddress, byte registerAddress, byte *data);
@@ -250,5 +307,7 @@ public:
     int getExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle);
     int getExternalFanSpeedRPM(NV_PHYSICAL_GPU_HANDLE& handle, int nb);
     bool setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle, int percent);
+    bool getTemps(NV_PHYSICAL_GPU_HANDLE& handle, NV_GPU_THERMAL_SETTINGS& infos);
+
 };
 
