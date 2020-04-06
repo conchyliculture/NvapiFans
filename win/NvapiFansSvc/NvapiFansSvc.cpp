@@ -18,7 +18,8 @@ VOID WINAPI ServiceCtrlHandler(DWORD);
 DWORD WINAPI ServiceWorkerThread(LPVOID lpParam);
 
 #define SERVICE_NAME _T("NvapiFans Service")  
-#define CONFIG_PATH _T("\\NvapiSvc\\config.json")
+#define CONFIG_DIR_NAME L"NvapiFansSvc"
+#define CONFIG_FILE_NAME L"config.json"
 
 FILETIME last_config_write_time;
 
@@ -172,30 +173,67 @@ void LogSuccess(HANDLE event_log, std::wstring message) {
         NULL);               // no binary data
 }
 
+//Returns the last Win32 error, in string format. Returns an empty string if there is no error.
+std::wstring GetLastErrorAsString()
+{
+    //Get the error message, if any.
+    DWORD errorMessageID = GetLastError();
+    if (errorMessageID == 0)
+        return std::wstring(); //No error message has been recorded
+
+    const DWORD s = 100 + 1;
+    WCHAR buffer[s];
+    size_t size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), buffer, s, NULL);
+
+    std::wstring message(buffer, size);
+
+    //Free the buffer.
+    LocalFree(buffer);
+
+    return message;
+}
+
 bool loadConfig(HANDLE event_log, nlohmann::json& config) {
 
     LPWSTR szPath[MAX_PATH];
     // Get path for each computer, non-user specific and non-roaming data.
-    if (SHGetKnownFolderPath(FOLDERID_ProgramData, NULL, 0, szPath) > 0) {
+    if (SHGetKnownFolderPath(FOLDERID_ProgramData, NULL, 0, szPath) >= 0) {
 
-        std::wstring config_path = *szPath;
-        config_path = config_path + CONFIG_PATH;
+        std::wstring appdata = *szPath;
+        std::filesystem::path appdata_directory = appdata;
+
+        std::filesystem::path config_directory_path = appdata_directory / CONFIG_DIR_NAME;
+
+        if (!std::filesystem::exists(config_directory_path)) {
+            LogError(event_log, L"Can't find config file parent: " + config_directory_path.wstring() + L". Creating it");
+            bool res = std::filesystem::create_directory(config_directory_path);
+            if (!res) {
+                LogError(event_log, L"Could not create directory: " + config_directory_path.wstring());
+                return false;
+            }
+        }
+        std::filesystem::path config_path = config_directory_path / CONFIG_FILE_NAME;
+
 
         if (!std::filesystem::exists(config_path)) {
-            LogError(event_log, L"Can't find config file: " + config_path);
+            LogError(event_log, L"Can't find config file: " + config_path.wstring() + L". Using defaults");
+            return false;
         }
-        // TODO: maybe not read file every second
+
+        LogSuccess(event_log, L"I found: " + config_path.wstring());
 
         std::ifstream ifs(config_path);
         ifs >> config;
+
     }
     else {
-        DWORD err = GetLastError();
+        std::wstring error_message = GetLastErrorAsString();
+        LogError(event_log, L"SHGetKnownFolderPath failed: " + error_message);
         return false;
     }
     return true;
 }
-
 
 DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 {
@@ -203,7 +241,14 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
     HANDLE event_log = RegisterEventSource(NULL, L"NvapiFansSvc");
     nlohmann::json config;
 
-    loadConfig(event_log, config);
+    LogSuccess(event_log, L"Worker created");
+
+    bool res = loadConfig(event_log, config);
+    if (!res) {
+        LogError(event_log, L"Could not load config");
+    }
+    LogSuccess(event_log, L"Config loaded");
+
 
     //  Periodically check if the service has been requested to stop
     while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
