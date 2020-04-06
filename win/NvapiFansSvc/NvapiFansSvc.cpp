@@ -1,9 +1,8 @@
 // From https://www.codeproject.com/Articles/499465/Simple-Windows-Service-in-Cplusplus
 
 #include <windows.h>
-#include "nv.h"
+#include "NvapiFansLib.h"
 #include <shlobj.h> /* SHGetKnownFolderPath */ 
-#include <Shlwapi.h> /* PathAppend */
 #include <tchar.h> /* for _T() macro */
 #include <iostream>
 #include <filesystem>
@@ -178,9 +177,9 @@ bool loadConfig(HANDLE event_log, nlohmann::json& config) {
     LPWSTR szPath[MAX_PATH];
     // Get path for each computer, non-user specific and non-roaming data.
     if (SHGetKnownFolderPath(FOLDERID_ProgramData, NULL, 0, szPath) > 0) {
-        PathAppend(*szPath, CONFIG_PATH);
 
         std::wstring config_path = *szPath;
+        config_path = config_path + CONFIG_PATH;
 
         if (!std::filesystem::exists(config_path)) {
             LogError(event_log, L"Can't find config file: " + config_path);

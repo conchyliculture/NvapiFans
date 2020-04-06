@@ -1,8 +1,13 @@
+// NvapiFansLib.cpp : Defines the functions for the static library.
+//
+
+#include "pch.h"
+#include "framework.h"
 #include <windows.h>
 #include <iostream>
 #include <vector>
 #include <math.h>       /* ceil & floor */
-#include "nv.h"
+#include "NvapiFansLib.h"
 
 NvApiClient::NvApiClient() {
 

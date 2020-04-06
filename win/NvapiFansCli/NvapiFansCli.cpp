@@ -1,7 +1,7 @@
 ﻿#include <iostream>
 #include "cxxopts.hpp"
-#include "nv.h"
-#include "NvapiFans.h"
+#include "NvapiFansLib.h"
+#include "NvapiFansCli.h"
 
 // Displays information for a specific gpu handle.
 bool showGPUInfos(NvApiClient api, NV_PHYSICAL_GPU_HANDLE gpu) {
