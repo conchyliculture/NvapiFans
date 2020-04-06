@@ -125,7 +125,7 @@ bool NvApiClient::I2CWriteByteEx(NV_PHYSICAL_GPU_HANDLE& gpu, byte deviceAddress
 	return true;
 }
 
-bool NvApiClient::showVersion(std::string &version) {
+bool NvApiClient::getNvapiVersion(std::string &version) {
 	NvAPI_Status status;
 
 	NvAPI_ShortString v;
@@ -141,7 +141,7 @@ bool NvApiClient::showVersion(std::string &version) {
 	return true;
 };
 
-bool  NvApiClient::getGPUHandles(std::vector<NV_PHYSICAL_GPU_HANDLE> &list_gpus) {
+bool NvApiClient::getGPUHandles(std::vector<NV_PHYSICAL_GPU_HANDLE> &list_gpus) {
 	NvAPI_Status status;
 
 	NV_PHYSICAL_GPU_HANDLE gh[NVAPI_MAX_PHYSICAL_GPUS];
@@ -226,4 +226,21 @@ bool NvApiClient::getTemps(NV_PHYSICAL_GPU_HANDLE& handle, NV_GPU_THERMAL_SETTIN
 	return true;
 }
 
-
+int NvApiClient::getGPUTemperature(NV_PHYSICAL_GPU_HANDLE& handle) {
+	bool res;
+	NV_GPU_THERMAL_SETTINGS infos{};
+	infos.version = NV_GPU_THERMAL_SETTINGS_VER_2;
+	res |= this->getTemps(handle, infos);
+	if (!res) {
+		return -1;
+	}
+	for (NvU32 i = 0; i < infos.count; i++) {
+		NV_THERMAL_TARGET target = infos.sensor[i].target;
+		switch (target) {
+		case NVAPI_THERMAL_TARGET_GPU:
+			return infos.sensor[i].currentTemp;
+			break;
+		}
+	}
+	return -1;
+}

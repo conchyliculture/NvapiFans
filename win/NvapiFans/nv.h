@@ -1,15 +1,16 @@
 #pragma once
 #include <windows.h>
 #include <cstdint>
+#include <filesystem>
 #include <iostream>
 #include <vector>
 
 typedef std::uint8_t byte;
 
 // From https://docs.nvidia.com/gameworks/content/gameworkslibrary/coresdk/nvapi/group__nvapitypes.html
-#define 	NVAPI_GENERIC_STRING_MAX   4096
-#define 	NVAPI_LONG_STRING_MAX   256
-#define 	NVAPI_SHORT_STRING_MAX   64
+#define NVAPI_GENERIC_STRING_MAX   4096
+#define NVAPI_LONG_STRING_MAX   256
+#define NVAPI_SHORT_STRING_MAX   64
 
 #define NVAPI_MAX_PHYSICAL_GPUS 64
 
@@ -24,11 +25,11 @@ typedef unsigned __int64 NvU64;
 typedef unsigned char NvU8;
 typedef unsigned long temp_NvU32;
 typedef NvU8 NvBool;
-typedef char    NvAPI_ShortString[NVAPI_SHORT_STRING_MAX];
-typedef char 	NvAPI_String[NVAPI_GENERIC_STRING_MAX];
-typedef char 	NvAPI_LongString[NVAPI_LONG_STRING_MAX];
-typedef char 	NvAPI_ShortString[NVAPI_SHORT_STRING_MAX];
-typedef NvU16 	NvAPI_UnicodeShortString[NVAPI_SHORT_STRING_MAX];
+typedef char NvAPI_ShortString[NVAPI_SHORT_STRING_MAX];
+typedef char NvAPI_String[NVAPI_GENERIC_STRING_MAX];
+typedef char NvAPI_LongString[NVAPI_LONG_STRING_MAX];
+typedef char NvAPI_ShortString[NVAPI_SHORT_STRING_MAX];
+typedef NvU16 NvAPI_UnicodeShortString[NVAPI_SHORT_STRING_MAX];
 
 typedef NvS32* NV_HANDLE;
 typedef NV_HANDLE NV_PHYSICAL_GPU_HANDLE;
@@ -254,10 +255,8 @@ typedef struct
 typedef NV_I2C_INFO_V3 	NV_I2C_INFO;
 
 #define MAKE_NVAPI_VERSION(typeName, ver) (NvU32)(sizeof(typeName) | ((ver) << 16))
-#define NV_I2C_INFO_VER3   MAKE_NVAPI_VERSION(NV_I2C_INFO_V3, 3)
-#define NV_I2C_INFO_VER   NV_I2C_INFO_VER3
-
-
+#define NV_I2C_INFO_VER3 MAKE_NVAPI_VERSION(NV_I2C_INFO_V3, 3)
+#define NV_I2C_INFO_VER NV_I2C_INFO_VER3
 // function pointer types
 typedef int* (*NvAPI_QueryInterface_t)(unsigned int offset);
 typedef NvAPI_Status(*NvAPI_Initialize_t)();
@@ -269,13 +268,11 @@ typedef NvAPI_Status(*NvAPI_I2CReadEx_t)(NV_PHYSICAL_GPU_HANDLE hPhysicalGpu, NV
 typedef NvAPI_Status(*NvAPI_I2CWriteEx_t)(NV_PHYSICAL_GPU_HANDLE hPhysicalGpu, NV_I2C_INFO* pI2cInfo, NvU32* unknown); // No idea what unknown is
 typedef NvAPI_Status(*NvAPI_GPU_GetThermalSettings_t)(NV_PHYSICAL_GPU_HANDLE hPhysicalGpu, NvU32 sensorIndex, NV_GPU_THERMAL_SETTINGS* pThermalSettings);
 
-
 #define I2C_EXTFAN_DEVICE_ADDRESS 0x2a
 #define I2C_EXTFAN_SPEED_CMD_REGISTER 0x41
 #define I2C_EXTFAN1_SPEED_RPM_REGISTER 0x44
 #define I2C_EXTFAN2_SPEED_RPM_REGISTER 0x48
 #define I2C_GPU_VRM_TEMP_REGISTER 0x15
-
 
 class NvApiClient
 {
@@ -283,14 +280,14 @@ private:
     HMODULE hNvapi;
 
 	// nvapi.dll internal function pointers
-	NvAPI_QueryInterface_t      NvAPI_QueryInterface = nullptr;
-	NvAPI_Initialize_t          NvAPI_Initialize = nullptr;
-	NvAPI_EnumPhysicalGPUs_t    NvAPI_EnumPhysicalGPUs = nullptr;
-	NvAPI_GetInterfaceVersionString_t       NvAPI_GetInterfaceVersionString = nullptr;
-	NvAPI_GPU_GetFullName_t		NvAPI_GPU_GetFullName = nullptr;
-    NvAPI_GetErrorMessage_t     NvAPI_GetErrorMessage = nullptr;
-    NvAPI_I2CReadEx_t      NvAPI_I2CReadEx = nullptr;
-    NvAPI_I2CWriteEx_t  NvAPI_I2CWriteEx = nullptr;
+	NvAPI_QueryInterface_t  NvAPI_QueryInterface = nullptr;
+	NvAPI_Initialize_t NvAPI_Initialize = nullptr;
+	NvAPI_EnumPhysicalGPUs_t NvAPI_EnumPhysicalGPUs = nullptr;
+	NvAPI_GetInterfaceVersionString_t NvAPI_GetInterfaceVersionString = nullptr;
+	NvAPI_GPU_GetFullName_t	NvAPI_GPU_GetFullName = nullptr;
+    NvAPI_GetErrorMessage_t NvAPI_GetErrorMessage = nullptr;
+    NvAPI_I2CReadEx_t NvAPI_I2CReadEx = nullptr;
+    NvAPI_I2CWriteEx_t NvAPI_I2CWriteEx = nullptr;
     NvAPI_GPU_GetThermalSettings_t NvAPI_GPU_GetThermalSettings = nullptr;
 
     void getNvAPIError(NvAPI_Status status, std::string message);
@@ -301,13 +298,13 @@ private:
 
 public:
 	NvApiClient();
-	bool showVersion(std::string& version);
+	bool getNvapiVersion(std::string& version);
 	bool getGPUHandles(std::vector<NV_PHYSICAL_GPU_HANDLE>& gpuHandles);
 	bool getGPUFullname(NV_PHYSICAL_GPU_HANDLE& handle, std::string& name);
     int getExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle);
     int getExternalFanSpeedRPM(NV_PHYSICAL_GPU_HANDLE& handle, int nb);
     bool setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle, int percent);
     bool getTemps(NV_PHYSICAL_GPU_HANDLE& handle, NV_GPU_THERMAL_SETTINGS& infos);
+    int getGPUTemperature(NV_PHYSICAL_GPU_HANDLE& handle);
 
 };
-

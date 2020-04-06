@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
 		if (result.count("debug")) {
 			std::string version;
 
-			res = api.showVersion(version);
+			res = api.getNvapiVersion(version);
 			if (!res) {
 				printf("Failed to get Nvapi version\n");
 				return res;
