@@ -1,4 +1,5 @@
-﻿#include <iostream>
+﻿#pragma warning(disable : 26812)
+#include <iostream>
 #include "cxxopts.hpp"
 #include "NvapiFansLib.h"
 #include "NvapiFansCli.h"
@@ -84,7 +85,7 @@ bool validateGPUId(std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu, int gpuId) {
 		return false;
 	}
 
-	if (gpuId > 0 && gpuId >= list_gpu.size()) {
+	if (gpuId > 0 && gpuId >= (int)list_gpu.size()) {
 		std::cerr << "GPU id provided is " << gpuId << ". Max GPU id is " << list_gpu.size() - 1 << std::endl;
 		return false;
 	}
