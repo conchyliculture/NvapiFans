@@ -117,7 +117,6 @@ bool setExternalFanSpeed(NvApiClient api, int gpuId, int percent) {
 		}
 		index += 1;
 	}
-	
 
 	res &= api.setExternalFanSpeedPercent(list_gpu.at(gpuId), percent);
 	
