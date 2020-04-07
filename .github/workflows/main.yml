@@ -21,3 +21,6 @@ jobs:
     # Runs a single command using the runners shell
     - name: Setup MSBuild.exe
       uses: warrenbuckley/Setup-MSBuild@v1
+    - name: MSBuild
+      working-directory: win
+      run: msbuild NvapiFans.sln
