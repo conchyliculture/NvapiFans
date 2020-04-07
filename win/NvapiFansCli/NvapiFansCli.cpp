@@ -66,7 +66,7 @@ bool showAllGPUsInfos(NvApiClient api, int gpuId) {
 	std::cout << "Found " << list_gpu.size() << " NVidia GPUs." << std::endl;
 
 	int index = 0;
-	for (NV_PHYSICAL_GPU_HANDLE gpu : list_gpu) {
+	for (NV_PHYSICAL_GPU_HANDLE &gpu : list_gpu) {
 		if (gpuId < 0 || index == gpuId) {
 			res &= showGPUInfos(api, gpu);
 		}
