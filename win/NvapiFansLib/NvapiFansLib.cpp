@@ -250,3 +250,29 @@ int NvApiClient::getGPUTemperature(NV_PHYSICAL_GPU_HANDLE& handle) {
 	}
 	return -1;
 }
+
+bool NvApiClient::detectI2CDevices(NV_PHYSICAL_GPU_HANDLE& handle, std::vector<int> detected_evices) {
+
+
+	// Asus GPUTweakII detection mechanism
+	NvU8 high ;
+	NvU8 low;
+
+	int chipId = 0;
+
+	bool res = I2CReadByteEx(handle, I2C_EXTFAN_DEVICE_ADDRESS, I2C_DEVICE_IDENTIFIER_HIGH_REGISTER, &high);
+	if (!res) {
+		return false;
+	}
+	bool res = I2CReadByteEx(handle, I2C_EXTFAN_DEVICE_ADDRESS, I2C_DEVICE_IDENTIFIER_LOW_REGISTER, &low);
+	if (!res) {
+		return false;
+	}
+
+	chipId = high << 8 + low;
+
+	if (chipId == I2C_IT8915_IDENTIFIER) {
+
+	}
+	return true;
+}
