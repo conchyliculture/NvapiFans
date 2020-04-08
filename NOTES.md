@@ -306,6 +306,7 @@ NV_I2C_INFO_V3  struc ; (sizeof=0x2C, mappedto_255)
 00000028 is_port_id_set  dd ?
 0000002C NV_I2C_INFO_V3  ends
 ```
+In Ida, doubleclick on var_34, and from the stack view, apply the new type you just created.
 
 This lets us confirm that some values statically set in the code in IDA match expectations:
 
@@ -314,3 +315,77 @@ This lets us confirm that some values statically set in the code in IDA match ex
  * `i2c_speed_khz` is set to `6` which means `NVAPI_I2C_SPEED_400KHZ`
 
 ## WinDBG 102
+
+Since we have a nice struct, let's ask WinDBG to show us the contents of it. It would be super nice to be able to trace
+all calls to this function and display the values of the NV_I2C_INFO_V3 struct fields.
+
+We know the call to the wrapper to the NvAPI_I2CWriteEx function happens at
+1000EC09 which is (0x10014E90 - 0x1000EC09) = 0x6287 from Vender!WriteI2C.
+
+This is where the WinDbg scripting part gets super annoying, but let's do this!
+
+```
+bp Vender!WriteI2C - 0x6287 "r$t0=poi(poi(@esp+4)+4);r$t1=by(poi(@esp+4)+8);r$t2=by(poi(@esp+4)+9);r$t3=poi(poi(poi(@esp+4)+c));r$t4=poi(poi(@esp+4)+10);r$t5=by(poi(poi(@esp+4)+14));r$t6=poi(poi(@esp+4)+18);r$t7=by(poi(@esp+4)+24);r$t8=poi(poi(@esp+4)+28);.echotime;.printf\"[%08x] WRITE DispMask=%08x,IsDDCPort=%02x,DevAddress=%02x, RegAddress=%02x, RegAddressSize=%08x, Data=%02x, Size=%02x, PortID=%02x, IsPortIDSet=%08x\\n\",@$tpid,@$t0,@$t1,@$t2,@$t3,@$t4,@$t5,@$t6,@$t7,@$t8;gc"
+```
+
+Let's split that. Offsets from @esp+4 are read from the struct display in IDA.
+```
+bp Vender!WriteI2C - 0x6287  \\ BP address
+"r$t0=poi(poi(@esp+4)+4);  \\ display_mask is a dword
+r$t1=by(poi(@esp+4)+8);    \\ is_ddc_port is a byte
+r$t2=by(poi(@esp+4)+9);    \\ i2c_dev_address is a byte
+r$t3=poi(poi(poi(@esp+4)+c));   \\ i2c_reg_address is a pointer to a dword
+r$t4=poi(poi(@esp+4)+10);       \\ reg_addr_size is a dword (always 1, as we'll see after tracing)
+r$t5=by(poi(poi(@esp+4)+14))    \\ data is a pointer to a byte (always only one as size is always 1)
+r$t6=poi(poi(@esp+4)+18);       \\ size is a dword
+r$t7=by(poi(@esp+4)+24);        \\ portId is a byte (we ignore i2c_speed & i2c_speed_khz as both as hardcoded
+r$t8=poi(poi(@esp+4)+28);       \\ is_ddc_port  is a dword
+.echotime;       \\ display a timestamp
+.printf\"[%08x] WRITE DispMask=%08x,IsDDCPort=%02x,DevAddress=%02x, RegAddress=%02x, RegAddressSize=%08x, Data=%02x, Size=%02x, PortID=%02x, IsPortIDSet=%08x\\n\",@$tpid,@$t0,@$t1,@$t2,@$t3,@$t4,@$t5,@$t6,@$t7,@$t8;
+gc"  // continue execution
+```
+
+Now fireup GPUTweakII.exe, attach to it in WinDbg, set your magic breakpoint, and start changing fan speed in the GUI, and we start seeing stuff like:
+
+<snip>
+WRITE DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=07, RegAddressSize=00000001, Data=01, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 15:48:48.950 2020 (UTC + 2:00)
+WRITE DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=04, RegAddressSize=00000001, Data=22, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 15:48:48.955 2020 (UTC + 2:00)
+WRITE DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=05, RegAddressSize=00000001, Data=22, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 15:48:48.960 2020 (UTC + 2:00)
+WRITE DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=06, RegAddressSize=00000001, Data=22, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 15:48:48.982 2020 (UTC + 2:00)
+WRITE DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=04, RegAddressSize=00000001, Data=22, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 15:48:48.987 2020 (UTC + 2:00)
+WRITE DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=05, RegAddressSize=00000001, Data=22, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 15:48:48.989 2020 (UTC + 2:00)
+WRITE DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=06, RegAddressSize=00000001, Data=22, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 15:48:49.012 2020 (UTC + 2:00)
+WRITE DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=04, RegAddressSize=00000001, Data=22, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 15:48:49.022 2020 (UTC + 2:00)
+WRITE DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=05, RegAddressSize=00000001, Data=22, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 15:48:49.024 2020 (UTC + 2:00)
+WRITE DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=06, RegAddressSize=00000001, Data=22, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 15:48:49.032 2020 (UTC + 2:00)
+<snip>
+```
+Nice! This shows all writes are indeed 1 byte long, which makes the WinDbg unpacking easier.
+
+This is a LOT of calls for what should be just a single command sent to the fans controler. But it turns out the RGB LED on the GPU will also
+do some show for you as you commit the new speed values.
+
+I decided to remove `gc` at the end of the BP macros, so I could see which call actually made the fan turn.
+```
+WRITE DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=41, RegAddressSize=00000001, Data=ff, Size=01, PortID=01, IsPortIDSet=00000001
+```
+Got it! Setting Fans to 100% speed means I get a 0xFF there, and 60% gives me 0x99.
+
+
+## Linux
+
+It's time to see if we're super lucky.
+
+Linux will scan for all interesting SMBus/I2C devices connected, and can expose them in a very simple to use way using the module `i2c-dev`.
+
+Let's see if I can see a device with address 0x54.
