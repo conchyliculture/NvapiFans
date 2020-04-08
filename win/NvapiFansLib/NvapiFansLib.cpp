@@ -250,3 +250,26 @@ int NvApiClient::getGPUTemperature(NV_PHYSICAL_GPU_HANDLE& handle) {
 	}
 	return -1;
 }
+
+bool NvApiClient::detectI2CDevice(NV_PHYSICAL_GPU_HANDLE& handle) {
+	bool res;
+	// Asus GPUTweakII detection mechanism
+	NvU8 high ;
+	NvU8 low;
+
+	int chipId = 0;
+
+	res = I2CReadByteEx(handle, I2C_EXTFAN_DEVICE_ADDRESS, I2C_DEVICE_IDENTIFIER_HIGH_REGISTER, &high);
+	res &= I2CReadByteEx(handle, I2C_EXTFAN_DEVICE_ADDRESS, I2C_DEVICE_IDENTIFIER_LOW_REGISTER, &low);
+	if (!res) {
+		std::cerr << "Error reading bytes from I2C device during identification." << std::endl;
+		return false;
+	}
+
+	chipId = (static_cast<int>(high) << 8) + static_cast<int>(low);
+	if (chipId == I2C_IT8915_IDENTIFIER) {
+		return true;
+	}
+	std::cerr << "Error detecting I2C device. Expecting device Id: " << std::hex << I2C_IT8915_IDENTIFIER << " but got " << chipId << " instead" << std::endl;
+	return false;
+}

@@ -325,13 +325,22 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
     }
     LogSuccess(event_log, L"Config loaded");
 
+    std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu;
+    bool detected = true;
+    for (NV_PHYSICAL_GPU_HANDLE& gpu : list_gpu) {
+        detected &= api.detectI2CDevice(gpu);
+    }
+    if (!detected) {
+        LogError(event_log, L"Failed to detect all GPU I2C devices");
+        return ERROR_BAD_COMMAND; // Maybe find a better error but eh
+    }
+
     //  Periodically check if the service has been requested to stop
     while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
     {
         
         bool res;
         std::string gpuName;
-        std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu;
         res = api.getGPUHandles(list_gpu);
 
         int index = 0;
