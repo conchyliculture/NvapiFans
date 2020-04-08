@@ -364,18 +364,8 @@ int _tmain(int argc, TCHAR* argv[])
         GetLastErrorAsString(errormsg);
         std::cout << err << std::endl;
         std::wcout << errormsg << std::endl;
-    }
 
-    return 0;
-}
-
-int main(int argc, TCHAR* argv[]) {
-    HANDLE event_log = RegisterEventSource(NULL, L"NvapiFansSvc");
-    service_config_t service_config{};
-
-    bool res = loadConfig(event_log, service_config);
-    if (!res) {
-        LogError(event_log, L"Could not load config, using defaults");
+        return err;
     }
 
     return 0;
