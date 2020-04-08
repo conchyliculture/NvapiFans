@@ -279,6 +279,7 @@ typedef NvAPI_Status(*NvAPI_GPU_GetThermalSettings_t)(NV_PHYSICAL_GPU_HANDLE hPh
 #define I2C_GPU_VRM_TEMP_REGISTER 0x15
 #define I2C_IT8915_IDENTIFIER 0x8915
 
+class NvApiClient
 {
 private:
     HMODULE hNvapi;
@@ -310,7 +311,7 @@ public:
     bool setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle, int percent);
     bool getTemps(NV_PHYSICAL_GPU_HANDLE& handle, NV_GPU_THERMAL_SETTINGS& infos);
     int getGPUTemperature(NV_PHYSICAL_GPU_HANDLE& handle);
-    bool detectI2CDevices(std::vector<int> detected_evices);
+    bool detectI2CDevice(NV_PHYSICAL_GPU_HANDLE& handle);
 
 };
 

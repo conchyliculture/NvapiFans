@@ -47,17 +47,22 @@ bool showGPUInfos(NvApiClient api, NV_PHYSICAL_GPU_HANDLE gpu) {
 	return res;
 }
 
+std::vector<NV_PHYSICAL_GPU_HANDLE> getAllGPUs(NvApiClient api) {
+	std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu;
+	bool res = api.getGPUHandles(list_gpu);
+	if (!res) {
+		printf("Failed to list GPUs\n");
+	}
+
+	return list_gpu;
+}
+
 // Collects the list of GPU handles, and will display informations related to them.
 // If gpuId is anything >= 0, will only show info for this one.
 bool showAllGPUsInfos(NvApiClient api, int gpuId) {
 	bool res = true;
 
-	std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu;
-	res &= api.getGPUHandles(list_gpu);
-	if (!res) {
-		printf("Failed to list GPUs\n");
-		return res;
-	}
+	std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu = getAllGPUs(api);
 
 	if (!validateGPUId(list_gpu, gpuId)) {
 		return false;
@@ -66,7 +71,7 @@ bool showAllGPUsInfos(NvApiClient api, int gpuId) {
 	std::cout << "Found " << list_gpu.size() << " NVidia GPUs." << std::endl;
 
 	int index = 0;
-	for (NV_PHYSICAL_GPU_HANDLE gpu : list_gpu) {
+	for (NV_PHYSICAL_GPU_HANDLE &gpu : list_gpu) {
 		if (gpuId < 0 || index == gpuId) {
 			res &= showGPUInfos(api, gpu);
 		}
@@ -94,18 +99,13 @@ bool validateGPUId(std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu, int gpuId) {
 
 bool setExternalFanSpeed(NvApiClient api, int gpuId, int percent) {
 	bool res;
-	std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu;
 
 	if (percent < 0 || percent >100) {
 		std::cerr << "Fan speed needs to be between 0 and 100" << std::endl;
 		return false;
 	}
 
-	res = api.getGPUHandles(list_gpu);
-	if (!res) {
-		std::cerr << "Failed to list GPUs" << std::endl;
-		return false;
-	}
+	std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu = getAllGPUs(api);
 	if (!validateGPUId(list_gpu, gpuId)) {
 		return false;
 	}
@@ -117,7 +117,6 @@ bool setExternalFanSpeed(NvApiClient api, int gpuId, int percent) {
 		}
 		index += 1;
 	}
-	
 
 	res &= api.setExternalFanSpeedPercent(list_gpu.at(gpuId), percent);
 	
@@ -148,10 +147,6 @@ int main(int argc, char* argv[])
 			return 0;
 		}
 
-		if (result.count("gpu")) {
-			gpuId = result["gpu"].as<int>();
-		}
-
 		NvApiClient api;
 		if (result.count("debug")) {
 			std::string version;
@@ -162,6 +157,20 @@ int main(int argc, char* argv[])
 				return res;
 			}
 			std::cout << "Nvapi version:" << version << std::endl;
+		}
+
+		std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu = getAllGPUs(api);
+		bool detected = true;
+		for (NV_PHYSICAL_GPU_HANDLE& gpu : list_gpu) {
+			detected &= api.detectI2CDevice(gpu);
+		}
+		if (!detected) {
+			std::cerr << "Failed to detect all GPU I2C devices" << std::endl;
+			exit(1);
+		}
+
+		if (result.count("gpu")) {
+			gpuId = result["gpu"].as<int>();
 		}
 
 		if (result.count("external")) {
