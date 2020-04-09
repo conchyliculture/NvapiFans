@@ -14,8 +14,8 @@ I want to have nothing to do if you brick your expensive gear.
 ## Installation / Usage
 
 See relevant documents per platform:
-  * [Linux](linux/README-linux.md) (Kind of works, but you'll have to send i2c commands on your own)
-  * [Windows](win/README-win.md) (WiP, almost done)
+  * [Linux](linux/README.md) (Kind of works, but you'll have to send i2c commands on your own)
+  * [Windows](win/README.md) (WiP, almost done)
 
 ## Research notes / Write Up
 
