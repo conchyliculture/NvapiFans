@@ -9,6 +9,15 @@
 #include <math.h>       /* ceil & floor */
 #include "NvapiFansLib.h"
 
+
+static int hexToPercent(byte hex) {
+	return (int)floor((hex * 100.0) / 0xFF);
+};
+static int percentToHex(byte hex) {
+	int hex_val = (int)hex;
+	return (int)ceil((hex_val * 0xFF) / 100.0);
+};
+
 NvApiClient::NvApiClient() {
 
 	#ifdef _WIN64
@@ -49,15 +58,7 @@ NvApiClient::NvApiClient() {
 	}
 }
 
-int NvApiClient::hexToPercent(byte hex) const {
-	return (int)floor((hex * 100.0) / 0xFF);
-};
-int NvApiClient::percentToHex(byte hex) const {
-	int hex_val = (int)hex;
-	return (int)ceil((hex_val * 0xFF) / 100.0);
-};
-
-void NvApiClient::getNvAPIError(NvAPI_Status status, std::string message) const {
+void NvApiClient::getNvAPIError(NvAPI_Status status, std::string &message) const {
 	NvAPI_ShortString nv_err;
 	NvAPI_GetErrorMessage(status, nv_err);
 	message = nv_err;

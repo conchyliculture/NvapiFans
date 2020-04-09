@@ -209,7 +209,7 @@ std::wstring utf8_decode(const std::string& str)
     return wstrTo;
 }
 
-bool parseConfig(const HANDLE& event_log, const std::wstring& config_path, service_config_t& service_config) {
+bool parseConfig(HANDLE event_log, const std::wstring& config_path, service_config_t& service_config) {
 
     service_config_t draft_config = {};
     try {
@@ -260,7 +260,7 @@ bool parseConfig(const HANDLE& event_log, const std::wstring& config_path, servi
     return true;
 }
 
-bool loadConfig(const HANDLE &event_log, service_config_t &service_config) {
+bool loadConfig(HANDLE event_log, service_config_t &service_config) {
 
     LPWSTR szPath;
 

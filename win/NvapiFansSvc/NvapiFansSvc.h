@@ -32,9 +32,4 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR* argv);
 
 VOID WINAPI ServiceCtrlHandler(DWORD CtrlCode);
 
-void LogError(const HANDLE &event_log, const std::wstring &message);
-void LogInfo(const HANDLE &event_log, const std::wstring &message);
-bool parseConfig(const HANDLE &event_log, const std::wstring &config_path, service_config_t& service_config);
-bool loadConfig(const HANDLE &event_log, nlohmann::json& config);
-
 DWORD WINAPI ServiceWorkerThread(LPVOID lpParam);

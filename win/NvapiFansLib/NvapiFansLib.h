@@ -293,13 +293,12 @@ private:
     void getNvAPIError(NvAPI_Status status, std::string message);
     bool I2CReadByteEx(const NV_PHYSICAL_GPU_HANDLE& gpu, byte deviceAddress, byte registerAddress, byte* data) const;
     bool I2CWriteByteEx(const NV_PHYSICAL_GPU_HANDLE& gpu, byte deviceAddress, byte registerAddress, byte value) const;
-    int hexToPercent(byte hex) const;
-    int percentToHex(byte hex) const;
+
 
 public:
 	NvApiClient();
 	bool getNvapiVersion(std::string& version) const;
-    void getNvAPIError(NvAPI_Status status, std::string message) const;
+    void getNvAPIError(NvAPI_Status status, std::string& message) const;
 	bool getGPUHandles(std::vector<NV_PHYSICAL_GPU_HANDLE>& gpuHandles) const;
 	bool getGPUFullname(const NV_PHYSICAL_GPU_HANDLE& handle, std::string& name) const;
     int getExternalFanSpeedPercent(const NV_PHYSICAL_GPU_HANDLE& handle) const;
