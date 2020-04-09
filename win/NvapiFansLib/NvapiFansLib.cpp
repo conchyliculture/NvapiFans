@@ -89,7 +89,7 @@ bool NvApiClient::I2CReadByteEx(NV_PHYSICAL_GPU_HANDLE &gpu, byte deviceAddress,
 	
 	NvU32 unknown = 0;
 	status = NvAPI_I2CReadEx(gpu, &pI2CInfo, &unknown);
-	if (status != 0) {
+	if (status != NVAPI_OK) {
 		std::string message;
 		getNvAPIError(status, message);
 		std::cerr << "Error calling NvAPI_I2CReadEx: " << message << std::endl;
@@ -123,7 +123,7 @@ bool NvApiClient::I2CWriteByteEx(NV_PHYSICAL_GPU_HANDLE& gpu, byte deviceAddress
 
 	NvU32 unknown = 0;
 	status = NvAPI_I2CWriteEx(gpu, &pI2CInfo, &unknown);
-	if (status != 0) {
+	if (status != NVAPI_OK) {
 		std::string message;
 		getNvAPIError(status, message);
 		std::cerr << "Error calling NvAPI_I2CWriteEx: " << message << std::endl;
@@ -137,7 +137,7 @@ bool NvApiClient::getNvapiVersion(std::string &version) {
 
 	NvAPI_ShortString v;
 	status = NvAPI_GetInterfaceVersionString(v);
-	if (status != 0) {
+	if (status != NVAPI_OK) {
 		std::string message;
 		getNvAPIError(status, message);
 		std::cerr << "Error calling NvAPI_GetInterfaceVersionString: " << message << std::endl;
@@ -154,7 +154,7 @@ bool NvApiClient::getGPUHandles(std::vector<NV_PHYSICAL_GPU_HANDLE> &list_gpus) 
 	NV_PHYSICAL_GPU_HANDLE gh[NVAPI_MAX_PHYSICAL_GPUS];
 	NvS32 gpu_count = 0;
 	status = NvAPI_EnumPhysicalGPUs(gh, &gpu_count);
-	if (status != 0) {
+	if (status != NVAPI_OK) {
 		std::string message;
 		getNvAPIError(status, message);
 		std::cerr << "Error calling NvAPI_EnumPhysicalGPUs: " << message << std::endl;
@@ -169,7 +169,7 @@ bool NvApiClient::getGPUFullname(NV_PHYSICAL_GPU_HANDLE &handle, std::string& na
 
 	NvAPI_ShortString n;
 	status = NvAPI_GPU_GetFullName(handle, n);
-	if ( status != 0) {
+	if ( status != NVAPI_OK) {
 		std::string message;
 		getNvAPIError(status, message);
 		std::cerr << "Error calling getGPUFullname: " << message << std::endl;
@@ -224,7 +224,7 @@ bool NvApiClient::getTemps(NV_PHYSICAL_GPU_HANDLE& handle, NV_GPU_THERMAL_SETTIN
 	NvAPI_Status status;
 	infos.version = NV_GPU_THERMAL_SETTINGS_VER_2;
 	status = NvAPI_GPU_GetThermalSettings(handle, NVAPI_THERMAL_TARGET_ALL, &infos);
-	if (status != 0) {
+	if (status != NVAPI_OK) {
 		std::string message;
 		getNvAPIError(status, message);
 		std::cerr << "Error calling NvAPI_GPU_GetThermalSettings: " << message << std::endl;
