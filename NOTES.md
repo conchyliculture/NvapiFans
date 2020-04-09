@@ -274,7 +274,9 @@ This function has seen some interest, from the [OpenRGB](https://gitlab.com/Calc
 
 This is also where things get dark and obscure. Nvidia offers [some documentation](https://docs.nvidia.com/gameworks/content/gameworkslibrary/coresdk/nvapi/group__i2capi.html#gaf7e90150d628f012642c4b61f9781d87) around its NVAPI framework, but it only lists `NvAPI_I2CWrite` and not `NvAPI_I2CWriteEx`.
 
-One [Rust package](https://arcnmx.github.io/nvapi-rs/nvapi_hi/sys/i2c/private/fn.NvAPI_I2CWriteEx.html) seems to provide some documentation about that function.
+We still can extract some interesting information from these docs, for one, It seems that NvAPI_I2CWrite is for 'DDC port'. These ports are for actually talking to your monitor. It makes sense we might not want to use this function, as we're not really talking to the monitor.
+
+One [Rust package](https://arcnmx.github.io/nvapi-rs/nvapi_hi/sys/i2c/private/fn.NvAPI_I2CWriteEx.html) seems to provide some documentation about that function, it also tells us about what the corresponding struct for NV_I2C_INFO_EX_V3 would look like.
 
 ## NVAPI
 
@@ -282,7 +284,38 @@ Friends helped me understand how the argument massaging & passing to the actual 
 
 The [OpenRGB](https://github.com/CalcProgrammer1/OpenRGB/blob/7b120515d802204ff5cc04df0c059d6eb1bfbc5e/dependencies/NVFC/nvapi.h#L455) project did quite a bunch of reverse engineering around that function, and we learn there that the struct is of type [NV_I2C_INFO_V3 which is actually documented by Nvidia](https://docs.nvidia.com/gameworks/content/gameworkslibrary/coresdk/nvapi/structNV__I2C__INFO__V3.html)
 
-So back to IDA to set this as the type of our struct, being taught at the same time about the importance of aligning your fields, and how much of a nightmare can IDA be for doing what looks like simple things:
+So back to IDA to set this as the type of our struct, being taught at the same time about the importance of aligning your fields, and how much of a nightmare can IDA be for doing what looks like simple things.
+
+We're definitely calling NvAPI_I2CWriteEx, so this means we want a NV_I2C_INFO_EX_V3, right? So, using the struct from the previous [Rust package](https://arcnmx.github.io/nvapi-rs/nvapi_hi/sys/i2c/private/fn.NvAPI_I2CWriteEx.html), we add our struct to IDA:
+
+```
+00000000 NV_I2C_INFO_EX_V3 struc ; (sizeof=0x28, mappedto_255)
+00000000 version         dd ?
+00000004 display_mask    dd ?
+00000008 is_ddc_port     db ?
+00000009 i2c_dev_address db ?   // Address of device on the I2C bus
+0000000A                 db ? ; undefined
+0000000B                 db ? ; undefined
+0000000C i2c_reg_address dd ?   // pointer to the Address of the register we're accessing on the i2c device
+00000010 data            dd ?   // pointer to byte array
+00000014 read            dd ?
+00000018 size            dd ?
+0000001C i2c_speed_khz   dd ?
+00000020 portId          db ?
+00000021                 db ? ; undefined
+00000022                 db ? ; undefined
+00000023                 db ? ; undefined
+00000024 is_port_id_set  dd ?
+00000028 NV_I2C_INFO_EX_V3 ends
+```
+
+In Ida, doubleclick on var_34, and from the stack view, apply the new type you just created.
+
+But there is a problem. Doing this it looks like some expected values are not where they should be.
+Most noticably, i2c_speed_khz is 0xFFFF, which is absoltely not near any of the [standard I2C speeds](https://www.i2c-bus.org/speed/).
+
+Maybe the NV_I2C_INFO_V3 struct would make more sence?
+
 ```
 NV_I2C_INFO_V3  struc ; (sizeof=0x2C, mappedto_255)
 ; XREF: nv_writei2c_wrapper/r
@@ -306,12 +339,11 @@ NV_I2C_INFO_V3  struc ; (sizeof=0x2C, mappedto_255)
 00000028 is_port_id_set  dd ?
 0000002C NV_I2C_INFO_V3  ends
 ```
-In Ida, doubleclick on var_34, and from the stack view, apply the new type you just created.
 
 This lets us confirm that some values statically set in the code in IDA match expectations:
 
  * `version` is a constant
- * `i2c_speed` is correctly set to `0xffff`
+ * `i2c_speed` is [correctly set to `0xffff`](https://docs.nvidia.com/gameworks/content/gameworkslibrary/coresdk/nvapi/structNV__I2C__INFO__V3.html#ade08a919e3a998a57c474cc34f894ce7)
  * `i2c_speed_khz` is set to `6` which means `NVAPI_I2C_SPEED_400KHZ`
 
 ## WinDBG 102
@@ -407,22 +439,22 @@ Cool! NVIDIA stuff, this is promising
 Unfortunately sensors-detect won't find anything on these
 ```
 Next adapter: NVIDIA i2c adapter 1 at 7:00.0 (i2c-2)
-Do you want to scan it? (yes/NO/selectively): 
+Do you want to scan it? (yes/NO/selectively):
 
 Next adapter: NVIDIA i2c adapter 3 at 7:00.0 (i2c-3)
-Do you want to scan it? (yes/NO/selectively): 
+Do you want to scan it? (yes/NO/selectively):
 
 Next adapter: NVIDIA i2c adapter 5 at 7:00.0 (i2c-4)
-Do you want to scan it? (yes/NO/selectively): 
+Do you want to scan it? (yes/NO/selectively):
 
 Next adapter: NVIDIA i2c adapter 6 at 7:00.0 (i2c-5)
-Do you want to scan it? (yes/NO/selectively): 
+Do you want to scan it? (yes/NO/selectively):
 
 Next adapter: NVIDIA i2c adapter 7 at 7:00.0 (i2c-6)
-Do you want to scan it? (yes/NO/selectively): 
+Do you want to scan it? (yes/NO/selectively):
 
 Next adapter: NVIDIA i2c adapter 8 at 7:00.0 (i2c-7)
-Do you want to scan it? (yes/NO/selectively): 
+Do you want to scan it? (yes/NO/selectively):
 
 ```
 So lm-sensors didn't find anything there. Let's scan these devices anyway.
@@ -431,24 +463,24 @@ So lm-sensors didn't find anything there. Let's scan these devices anyway.
 ```
 # i2cdetect -y 2
      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-00:          -- -- -- -- -- 08 -- -- -- -- -- -- -- 
-10: -- -- -- -- -- 15 -- -- -- -- -- -- -- -- -- -- 
-20: -- -- -- -- -- -- -- 27 -- -- 2a -- -- -- -- -- 
-30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-60: -- -- -- -- -- -- -- -- 68 -- -- -- -- -- -- -- 
+00:          -- -- -- -- -- 08 -- -- -- -- -- -- --
+10: -- -- -- -- -- 15 -- -- -- -- -- -- -- -- -- --
+20: -- -- -- -- -- -- -- 27 -- -- 2a -- -- -- -- --
+30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+60: -- -- -- -- -- -- -- -- 68 -- -- -- -- -- -- --
 70: -- -- -- -- -- -- -- --
 
 # i2cdetect -y 4
      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-00:          -- -- -- -- -- -- -- -- -- -- -- -- -- 
-10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-30: 30 31 32 33 34 35 36 37 -- -- -- -- -- -- -- -- 
-40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-50: 50 51 52 53 54 55 56 57 58 59 5a 5b 5c 5d 5e 5f 
-60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+00:          -- -- -- -- -- -- -- -- -- -- -- -- --
+10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+30: 30 31 32 33 34 35 36 37 -- -- -- -- -- -- -- --
+40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+50: 50 51 52 53 54 55 56 57 58 59 5a 5b 5c 5d 5e 5f
+60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 70: -- -- -- -- -- -- -- --
 ```
 Other i2c devices don't return much here
@@ -488,7 +520,7 @@ def write(bus, device, address, val)
   return r
 end
 
-0.upto(255) do |i| 
+0.upto(255) do |i|
   r = write(2, 0x2a, 0x41, i)
   sleep 2
   f1= read(2,0x2a,0x44)
