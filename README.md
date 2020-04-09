@@ -1,13 +1,23 @@
 # NvapiFans
-Control external fans on some specific graphic cards
 
-## Installation
+Control external fans (ie: connected via the FanConnect headers) on ASUS ROG Strix 2070 Super.
+
+Might work on other ASUS graphic cards.
+
+![](docs/meme.png)
+
+## Disclamer
+
+These tools are modifying the physical state of your computer. It might be doing things wrong, and
+I want to have nothing to do if you brick your expensive gear.
+
+## Installation / Usage
 
 See relevant documents per platform:
-  * [linux][docs/READLE-linux.md]
-  * [windows][docs/READLE-win.md]
+  * [linux](docs/README-linux.md)
+  * [windows](docs/README-win.md)
 
-## Write Up
+## Research notes / Write Up
 
 See [NOTES.md](NOTES.md)
 
