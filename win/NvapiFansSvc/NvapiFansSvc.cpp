@@ -154,7 +154,7 @@ VOID WINAPI ServiceCtrlHandler(DWORD CtrlCode)
     }
 }
 
-void LogError(HANDLE event_log, std::wstring message) {
+void LogError(const HANDLE &event_log, const std::wstring &message) {
     const wchar_t* buffer = message.c_str();
     ReportEvent(event_log,        // event log handle
         EVENTLOG_ERROR_TYPE, // event type
@@ -167,10 +167,10 @@ void LogError(HANDLE event_log, std::wstring message) {
         NULL);               // no binary data
 }
 
-void LogSuccess(HANDLE event_log, std::wstring message) {
+void LogInfo(const HANDLE &event_log, const std::wstring &message) {
     const wchar_t* buffer = message.c_str();
     ReportEvent(event_log,        // event log handle
-        EVENTLOG_SUCCESS, // event type
+        EVENTLOG_INFORMATION_TYPE, // event type
         0,                   // event category
         1,                   // event identifier
         NULL,                // no security identifier
@@ -212,7 +212,7 @@ std::wstring utf8_decode(const std::string& str)
     return wstrTo;
 }
 
-bool parseConfig(HANDLE event_log, std::wstring config_path, service_config_t& service_config) {
+bool parseConfig(const HANDLE &event_log, std::wstring config_path, service_config_t& service_config) {
     try {
         nlohmann::json j;
         std::ifstream ifs(config_path);
@@ -260,7 +260,7 @@ bool parseConfig(HANDLE event_log, std::wstring config_path, service_config_t& s
     return false;
 }
 
-bool loadConfig(HANDLE event_log, service_config_t &service_config) {
+bool loadConfig(const HANDLE &event_log, service_config_t &service_config) {
 
     LPWSTR szPath;
 
@@ -286,7 +286,7 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
             LogError(event_log, L"Can't find config file: " + config_path.wstring());
         }
         else {
-            LogSuccess(event_log, L"I found: " + config_path.wstring());
+            LogInfo(event_log, L"I found: " + config_path.wstring());
             const std::wstring config_path_w = config_path.wstring();
             parseConfig(event_log, config_path_w, service_config);
         }
@@ -297,7 +297,7 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
             L"\t- Min Speed: " + std::to_wstring(service_config.gpu_config.min_fanspeed_percent) + L"%" +
             L"\t- Start Fan: " + std::to_wstring(service_config.gpu_config.start_fan_temp_C) + L"C"
             ;
-        LogSuccess(event_log, message);
+        LogInfo(event_log, message);
 
 
         CoTaskMemFree(szPath);
@@ -317,13 +317,13 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
     HANDLE event_log = RegisterEventSource(NULL, L"NvapiFansSvc");
     service_config_t service_config{};
 
-    LogSuccess(event_log, L"Worker created");
+    LogInfo(event_log, L"Worker created");
 
     bool res = loadConfig(event_log, service_config);
     if (!res) {
         LogError(event_log, L"Could not load config, using defaults");
     }
-    LogSuccess(event_log, L"Config loaded");
+    LogInfo(event_log, L"Config loaded");
 
     //  Periodically check if the service has been requested to stop
     while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
