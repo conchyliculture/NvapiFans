@@ -19,7 +19,11 @@ bool showGPUInfos(NvApiClient api, NV_PHYSICAL_GPU_HANDLE gpu) {
 	int actualSpeedRPM2 = 0;
 	actualSpeedRPM2 = api.getExternalFanSpeedRPM(gpu, 2);
 
+	int utilization = 0;
+	utilization = api.getGPUUsage(gpu);
+
 	std::cout << "- " << gpu_name << std::endl;
+	std::cout << "  * GPU Utilization: " << utilization << "%" << std::endl;
 	std::cout << "  * External fan speed was set at " << speedCmd << "%" << std::endl;
 	std::cout << "  * Actual External fan1 Speed: " << actualSpeedRPM1 << " RPM" << std::endl;
 	std::cout << "  * Actual External fan2 Speed: " << actualSpeedRPM2 << " RPM" << std::endl;

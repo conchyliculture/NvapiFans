@@ -257,6 +257,24 @@ typedef NV_I2C_INFO_V3 	NV_I2C_INFO;
 #define MAKE_NVAPI_VERSION(typeName, ver) (NvU32)(sizeof(typeName) | ((ver) << 16))
 #define NV_I2C_INFO_VER3 MAKE_NVAPI_VERSION(NV_I2C_INFO_V3, 3)
 #define NV_I2C_INFO_VER NV_I2C_INFO_VER3
+
+
+#define NVAPI_GPU_UTILIZATION_DOMAIN_GPU 0
+#define NVAPI_GPU_UTILIZATION_DOMAIN_FB  1
+#define NVAPI_GPU_UTILIZATION_DOMAIN_VID 2
+#define NVAPI_GPU_UTILIZATION_DOMAIN_BUS 3
+#define NVAPI_MAX_GPU_UTILIZATIONS 8
+typedef struct {
+    NvU32       version;        //!< Structure version
+    NvU32       flags;          //!< bit 0 indicates if the dynamic Pstate is enabled or not
+    struct {
+        NvU32   bIsPresent:1;   //!< Set if this utilization domain is present on this GPU
+        NvU32   percentage;     //!< Percentage of time where the domain is considered busy in the last 1 second interval
+    } utilization[NVAPI_MAX_GPU_UTILIZATIONS];
+} NV_GPU_DYNAMIC_PSTATES_INFO_EX;
+#define NV_GPU_DYNAMIC_PSTATES_INFO_EX_VER MAKE_NVAPI_VERSION(NV_GPU_DYNAMIC_PSTATES_INFO_EX_VER, 1)
+
+
 // function pointer types
 typedef int* (*NvAPI_QueryInterface_t)(unsigned int offset);
 typedef NvAPI_Status(*NvAPI_Initialize_t)();
@@ -267,7 +285,7 @@ typedef NvAPI_Status(*NvAPI_GetErrorMessage_t)(NvAPI_Status nr, NvAPI_ShortStrin
 typedef NvAPI_Status(*NvAPI_I2CReadEx_t)(NV_PHYSICAL_GPU_HANDLE hPhysicalGpu, NV_I2C_INFO* pI2cInfo, NvU32* unknown); // No idea what unknown is
 typedef NvAPI_Status(*NvAPI_I2CWriteEx_t)(NV_PHYSICAL_GPU_HANDLE hPhysicalGpu, NV_I2C_INFO* pI2cInfo, NvU32* unknown); // No idea what unknown is
 typedef NvAPI_Status(*NvAPI_GPU_GetThermalSettings_t)(NV_PHYSICAL_GPU_HANDLE hPhysicalGpu, NvU32 sensorIndex, NV_GPU_THERMAL_SETTINGS* pThermalSettings);
-
+typedef NvAPI_Status(*NvAPI_GPU_GetDynamicPstatesInfoEx_t)(NV_PHYSICAL_GPU_HANDLE hPhysicalGpu, NV_GPU_DYNAMIC_PSTATES_INFO_EX* pDynamicPstatesInfoEx);
 
 // these were found on a Asus ROG Strix RTX 2070 SUPER
 #define I2C_EXTFAN_DEVICE_ADDRESS 0x2a
@@ -294,6 +312,7 @@ private:
     NvAPI_I2CReadEx_t NvAPI_I2CReadEx = nullptr;
     NvAPI_I2CWriteEx_t NvAPI_I2CWriteEx = nullptr;
     NvAPI_GPU_GetThermalSettings_t NvAPI_GPU_GetThermalSettings = nullptr;
+    NvAPI_GPU_GetDynamicPstatesInfoEx_t NvAPI_GPU_GetDynamicPstatesInfoEx = nullptr;
 
     void getNvAPIError(NvAPI_Status status, std::string message);
     bool I2CReadByteEx(NV_PHYSICAL_GPU_HANDLE &gpu, byte deviceAddress, byte registerAddress, byte *data);
@@ -312,6 +331,7 @@ public:
     bool getTemps(NV_PHYSICAL_GPU_HANDLE& handle, NV_GPU_THERMAL_SETTINGS& infos);
     int getGPUTemperature(NV_PHYSICAL_GPU_HANDLE& handle);
     bool detectI2CDevice(NV_PHYSICAL_GPU_HANDLE& handle);
+    int getGPUUsage(NV_PHYSICAL_GPU_HANDLE& handle);
 
 };
 

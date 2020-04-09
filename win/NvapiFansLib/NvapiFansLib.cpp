@@ -38,6 +38,7 @@ NvApiClient::NvApiClient() {
 			NvAPI_I2CReadEx = (NvAPI_I2CReadEx_t)(*NvAPI_QueryInterface)(0x4D7B0709);
 			NvAPI_I2CWriteEx = (NvAPI_I2CWriteEx_t)(*NvAPI_QueryInterface)(0x283AC65A);
 			NvAPI_GPU_GetThermalSettings = (NvAPI_GPU_GetThermalSettings_t)(*NvAPI_QueryInterface)(0xE3640A56);
+			NvAPI_GPU_GetDynamicPstatesInfoEx = (NvAPI_GPU_GetDynamicPstatesInfoEx_t)(*NvAPI_QueryInterface)(0x60DED2ED);
 
 			NvAPI_Status res = NvAPI_Initialize();
 			success = (res == NVAPI_OK);
@@ -273,3 +274,21 @@ bool NvApiClient::detectI2CDevice(NV_PHYSICAL_GPU_HANDLE& handle) {
 	std::cerr << "Error detecting I2C device. Expecting device Id: " << std::hex << I2C_IT8915_IDENTIFIER << " but got " << chipId << " instead" << std::endl;
 	return false;
 }
+
+int NvApiClient::getGPUUsage(NV_PHYSICAL_GPU_HANDLE& handle) {
+	NvU32 utilization = -1;
+	NV_GPU_DYNAMIC_PSTATES_INFO_EX GPUperf;
+	GPUperf.version = MAKE_NVAPI_VERSION(NV_GPU_DYNAMIC_PSTATES_INFO_EX, 1);
+	NvAPI_Status status = NvAPI_GPU_GetDynamicPstatesInfoEx(handle, &GPUperf);
+	if (status != NVAPI_OK) {
+		std::string message;
+		getNvAPIError(status, message);
+		std::cerr << "Error calling NvAPI_GPU_GetThermalSettings: " << message << std::endl;
+		return -1;
+	}
+	if (GPUperf.utilization[NVAPI_GPU_UTILIZATION_DOMAIN_GPU].bIsPresent)
+	{
+		utilization = GPUperf.utilization[NVAPI_GPU_UTILIZATION_DOMAIN_GPU].percentage;
+	}
+	return utilization;
+};
