@@ -181,25 +181,22 @@ void LogInfo(const HANDLE &event_log, const std::wstring &message) {
 }
 
 //Returns the last Win32 error, in string format. Returns an empty string if there is no error.
-void GetLastErrorAsString(std::wstring &message)
+std::wstring GetLastErrorAsString()
 {
-    //Get the error message, if any.
     DWORD errorMessageID = GetLastError();
     if (errorMessageID == 0)
-        return; //No error message has been recorded
+        return std::wstring(); //No error message has been recorded
 
     LPVOID  lpMsgBuf;
     DWORD  size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
         NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpMsgBuf, 0, NULL);
-    if (size <=0 ) {
-        return;
-    }
+    if (size <=0 )
+        return std::wstring();
+
     LPCWSTR lpMsgStr = (LPCWSTR)lpMsgBuf;
-    std::wstring result(lpMsgStr, lpMsgStr + size);
-    //Free the buffer.
+    std::wstring message(lpMsgStr, lpMsgStr + size);
     LocalFree(lpMsgBuf);
-    message = result;
-    return;
+    return message;
 }
 
 
@@ -212,7 +209,7 @@ std::wstring utf8_decode(const std::string& str)
     return wstrTo;
 }
 
-bool parseConfig(const HANDLE &event_log, std::wstring config_path, service_config_t& service_config) {
+bool parseConfig(const HANDLE &event_log, const std::wstring &config_path, service_config_t& service_config) {
     try {
         nlohmann::json j;
         std::ifstream ifs(config_path);
@@ -240,7 +237,6 @@ bool parseConfig(const HANDLE &event_log, std::wstring config_path, service_conf
                 service_config.gpu_config.start_fan_temp_C = j["gpu_config"]["start_fan_temp_C"].get<int>();
             }
         }
-        return true;
     }
     catch (nlohmann::json::parse_error& e)
     {
@@ -249,15 +245,16 @@ bool parseConfig(const HANDLE &event_log, std::wstring config_path, service_conf
         errmsg += "exception id: " + std::to_string(e.id) + "\n";
         errmsg += "byte position of error: " + std::to_string(e.byte) + "\n";
        LogError(event_log, utf8_decode(errmsg));
-    //   LogError(event_log, std::wstring_convert(errmsg));
+       return false;
     }
     catch (nlohmann::json::type_error& e) {
         std::string errmsg = "Error parsing json:";
         errmsg += "message: " + (std::string)(e.what()) + "\n";
         errmsg += "exception id: " + std::to_string(e.id) + "\n";
         LogError(event_log, utf8_decode(errmsg));
+        return false;
     }
-    return false;
+    return true;
 }
 
 bool loadConfig(const HANDLE &event_log, service_config_t &service_config) {
@@ -265,7 +262,7 @@ bool loadConfig(const HANDLE &event_log, service_config_t &service_config) {
     LPWSTR szPath;
 
     // Get path for each computer, non-user specific and non-roaming data.
-    if (SHGetKnownFolderPath(FOLDERID_ProgramData, NULL, 0, &szPath) >= 0) {
+    if (SHGetKnownFolderPath(FOLDERID_ProgramData, NULL, 0, &szPath) == S_OK) {
 
         std::wstring appdata = szPath;
         std::filesystem::path appdata_directory = appdata;
@@ -277,6 +274,7 @@ bool loadConfig(const HANDLE &event_log, service_config_t &service_config) {
             bool res = std::filesystem::create_directory(config_directory_path);
             if (!res) {
                 LogError(event_log, L"Could not create directory: " + config_directory_path.wstring());
+                CoTaskMemFree(szPath);
                 return false;
             }
         }
@@ -303,9 +301,7 @@ bool loadConfig(const HANDLE &event_log, service_config_t &service_config) {
         CoTaskMemFree(szPath);
     }
     else {
-        std::wstring error_message;
-        GetLastErrorAsString(error_message);
-        LogError(event_log, L"SHGetKnownFolderPath failed: " + error_message);
+        LogError(event_log, L"SHGetKnownFolderPath failed");
         return false;
     }
     return true;
@@ -360,10 +356,8 @@ int _tmain(int argc, TCHAR* argv[])
     if (StartServiceCtrlDispatcher(dispatchTable) == FALSE)
     {
         int err = GetLastError();
-        std::wstring errormsg;
-        GetLastErrorAsString(errormsg);
         std::cout << err << std::endl;
-        std::wcout << errormsg << std::endl;
+        std::wcout << GetLastErrorAsString() << std::endl;
 
         return err;
     }
