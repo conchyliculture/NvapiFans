@@ -154,7 +154,7 @@ VOID WINAPI ServiceCtrlHandler(DWORD CtrlCode)
     }
 }
 
-void LogError(const HANDLE &event_log, const std::wstring &message) {
+void LogError(HANDLE event_log, const std::wstring &message) {
     const wchar_t* buffer = message.c_str();
     ReportEvent(event_log,        // event log handle
         EVENTLOG_ERROR_TYPE, // event type
@@ -167,7 +167,7 @@ void LogError(const HANDLE &event_log, const std::wstring &message) {
         NULL);               // no binary data
 }
 
-void LogInfo(const HANDLE &event_log, const std::wstring &message) {
+void LogInfo(HANDLE event_log, const std::wstring &message) {
     const wchar_t* buffer = message.c_str();
     ReportEvent(event_log,        // event log handle
         EVENTLOG_INFORMATION_TYPE, // event type
@@ -286,19 +286,9 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
             LogError(event_log, L"Can't find config file: " + config_path.wstring());
         }
         else {
-            LogInfo(event_log, L"I found: " + config_path.wstring());
             const std::wstring config_path_w = config_path.wstring();
             parseConfig(event_log, config_path_w, service_config);
         }
-
-        std::wstring message =
-            L"Applying config:\n "
-            "\t- Target GPU temp: " + std::to_wstring(service_config.gpu_config.target_temp_max_C) + L"C" +
-            L"\t- Min Speed: " + std::to_wstring(service_config.gpu_config.min_fanspeed_percent) + L"%" +
-            L"\t- Start Fan: " + std::to_wstring(service_config.gpu_config.start_fan_temp_C) + L"C"
-            ;
-        LogInfo(event_log, message);
-
 
         CoTaskMemFree(szPath);
     }
@@ -321,7 +311,14 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
     if (!res) {
         LogError(event_log, L"Could not load config, using defaults");
     }
-    LogInfo(event_log, L"Config loaded");
+
+    std::wstring message =
+        L"Using config:\n "
+        "\t- Target GPU temp: " + std::to_wstring(service_config.gpu_config.target_temp_max_C) + L"C" +
+        L"\t- Min Speed: " + std::to_wstring(service_config.gpu_config.min_fanspeed_percent) + L"%" +
+        L"\t- Start Fan: " + std::to_wstring(service_config.gpu_config.start_fan_temp_C) + L"C"
+        ;
+    LogInfo(event_log, message);
 
     //  Periodically check if the service has been requested to stop
     while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
