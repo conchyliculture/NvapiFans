@@ -209,7 +209,9 @@ std::wstring utf8_decode(const std::string& str)
     return wstrTo;
 }
 
-bool parseConfig(const HANDLE &event_log, const std::wstring &config_path, service_config_t& service_config) {
+bool parseConfig(const HANDLE& event_log, const std::wstring& config_path, service_config_t& service_config) {
+
+    service_config_t draft_config = {};
     try {
         nlohmann::json j;
         std::ifstream ifs(config_path);
@@ -228,13 +230,13 @@ bool parseConfig(const HANDLE &event_log, const std::wstring &config_path, servi
 
         if (j.count("gpu_config")) {
             if (j["gpu_config"].count("target_temp_max_C")) {
-                service_config.gpu_config.target_temp_max_C = j["gpu_config"]["target_temp_max_C"].get<int>();
+                draft_config.gpu_config.target_temp_max_C = j["gpu_config"]["target_temp_max_C"].get<int>();
             }
             if (j["gpu_config"].count("min_fanspeed_percent")) {
-                service_config.gpu_config.min_fanspeed_percent = j["gpu_config"]["min_fanspeed_percent"].get<int>();
+                draft_config.gpu_config.min_fanspeed_percent = j["gpu_config"]["min_fanspeed_percent"].get<int>();
             }
             if (j["gpu_config"].count("start_fan_temp_C")) {
-                service_config.gpu_config.start_fan_temp_C = j["gpu_config"]["start_fan_temp_C"].get<int>();
+                draft_config.gpu_config.start_fan_temp_C = j["gpu_config"]["start_fan_temp_C"].get<int>();
             }
         }
     }
@@ -254,6 +256,7 @@ bool parseConfig(const HANDLE &event_log, const std::wstring &config_path, servi
         LogError(event_log, utf8_decode(errmsg));
         return false;
     }
+    service_config = draft_config;
     return true;
 }
 
