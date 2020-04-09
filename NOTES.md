@@ -1,7 +1,5 @@
 # Research notes & writeup
 
-Have fun.
-
 ## Goal
 
 Graphic cards made by ASUS have their own [PWM fan headers](https://rog.asus.com/articles/gaming-graphics-cards/strix-gtx-10801070-what-is-asus-fancontrol/) that can be controlled via their specific app, for example to trigger extra air intake when your GPU is getting toasty. The 'Technology' is called 'FanControl', and every time I will talk about fans here, I'm talking about these headers, and not the original fans that come screwed on top of the GPU.
