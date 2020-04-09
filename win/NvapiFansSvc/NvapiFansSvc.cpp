@@ -151,7 +151,7 @@ VOID WINAPI ServiceCtrlHandler(DWORD CtrlCode)
     }
 }
 
-void LogError(HANDLE event_log, std::wstring message) {
+void LogError(HANDLE event_log, const std::wstring &message) {
     const wchar_t* buffer = message.c_str();
     ReportEvent(event_log,        // event log handle
         EVENTLOG_ERROR_TYPE, // event type
@@ -164,10 +164,10 @@ void LogError(HANDLE event_log, std::wstring message) {
         NULL);               // no binary data
 }
 
-void LogSuccess(HANDLE event_log, std::wstring message) {
+void LogInfo(HANDLE event_log, const std::wstring &message) {
     const wchar_t* buffer = message.c_str();
     ReportEvent(event_log,        // event log handle
-        EVENTLOG_SUCCESS, // event type
+        EVENTLOG_INFORMATION_TYPE, // event type
         0,                   // event category
         1,                   // event identifier
         NULL,                // no security identifier
@@ -225,7 +225,7 @@ bool loadConfig(HANDLE event_log, nlohmann::json& config) {
             return false;
         }
 
-        LogSuccess(event_log, L"I found: " + config_path.wstring());
+        LogInfo(event_log, L"I found: " + config_path.wstring());
 
         std::ifstream ifs(config_path);
         ifs >> config;
@@ -245,13 +245,13 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
     HANDLE event_log = RegisterEventSource(NULL, L"NvapiFansSvc");
     nlohmann::json config;
 
-    LogSuccess(event_log, L"Worker created");
+    LogInfo(event_log, L"Worker created");
 
     bool res = loadConfig(event_log, config);
     if (!res) {
         LogError(event_log, L"Could not load config");
     }
-    LogSuccess(event_log, L"Config loaded");
+    LogInfo(event_log, L"Config loaded");
 
     //  Periodically check if the service has been requested to stop
     while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
