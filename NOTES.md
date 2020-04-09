@@ -2,7 +2,7 @@
 
 ## Goal
 
-Graphic cards made by ASUS have their own [PWM fan headers](https://rog.asus.com/articles/gaming-graphics-cards/strix-gtx-10801070-what-is-asus-fancontrol/) that can be controlled via their specific app, for example to trigger extra air intake when you GPU is getting toast.
+Graphic cards made by ASUS have their own [PWM fan headers](https://rog.asus.com/articles/gaming-graphics-cards/strix-gtx-10801070-what-is-asus-fancontrol/) that can be controlled via their specific app, for example to trigger extra air intake when you GPU is getting toast. The 'Technology' is called 'FanControl', and every time I will talk about fans here, I'm talking about these headers, and not the original fans that come screwed on top of the GPU.
 
 The problem is I couldn't find any other tool to control it but [ASUS provided software](https://www.asus.com/us/site/graphics-cards/gpu-tweak-ii/).
 It also turns out that their app is [kind](https://www.reddit.com/r/buildapc/comments/4cbb1y/discussion_bad_experience_with_asus_gpu_tweak_ii/) of [lame](https://www.reddit.com/r/nvidia/comments/99r9vo/asus_gpu_tweak_ii_killed_my_gtx_970/) and bloated and [might inject ads](https://www.guru3d.com/news_story/asus_gpu_tweak_ii_injects_ads_into_your_games.html) and install [terrible drivers](https://syscall.eu/blog/2020/03/30/asus_gio/), so it’d be cool to have something else.
@@ -282,7 +282,6 @@ One [Rust package](https://arcnmx.github.io/nvapi-rs/nvapi_hi/sys/i2c/private/fn
 
 Friends helped me understand how the argument massaging & passing to the actual call to `NvAPI_I2CWriteEx` was happening, and that the structure that contains info is actually set in `sub_1000EB90`. So what is that structure like?
 
-The [OpenRGB](https://github.com/CalcProgrammer1/OpenRGB/blob/7b120515d802204ff5cc04df0c059d6eb1bfbc5e/dependencies/NVFC/nvapi.h#L455) project did quite a bunch of reverse engineering around that function, and we learn there that the struct is of type [NV_I2C_INFO_V3 which is actually documented by Nvidia](https://docs.nvidia.com/gameworks/content/gameworkslibrary/coresdk/nvapi/structNV__I2C__INFO__V3.html)
 
 So back to IDA to set this as the type of our struct, being taught at the same time about the importance of aligning your fields, and how much of a nightmare can IDA be for doing what looks like simple things.
 
@@ -314,7 +313,9 @@ In Ida, doubleclick on var_34, and from the stack view, apply the new type you j
 But there is a problem. Doing this it looks like some expected values are not where they should be.
 Most noticably, i2c_speed_khz is 0xFFFF, which is absoltely not near any of the [standard I2C speeds](https://www.i2c-bus.org/speed/).
 
-Maybe the NV_I2C_INFO_V3 struct would make more sence?
+On the other hand, the [OpenRGB](https://github.com/CalcProgrammer1/OpenRGB/blob/7b120515d802204ff5cc04df0c059d6eb1bfbc5e/dependencies/NVFC/nvapi.h#L455) project did quite a bunch of reverse engineering around that function, for the blinky lights parts, and we learn there that the struct used by NvAPI_I2CWriteEx is of type [NV_I2C_INFO_V3 which is actually documented by Nvidia](https://docs.nvidia.com/gameworks/content/gameworkslibrary/coresdk/nvapi/structNV__I2C__INFO__V3.html)
+
+So let's try NV_I2C_INFO_V3 instead:
 
 ```
 NV_I2C_INFO_V3  struc ; (sizeof=0x2C, mappedto_255)
@@ -345,6 +346,16 @@ This lets us confirm that some values statically set in the code in IDA match ex
  * `version` is a constant
  * `i2c_speed` is [correctly set to `0xffff`](https://docs.nvidia.com/gameworks/content/gameworkslibrary/coresdk/nvapi/structNV__I2C__INFO__V3.html#ade08a919e3a998a57c474cc34f894ce7)
  * `i2c_speed_khz` is set to `6` which means `NVAPI_I2C_SPEED_400KHZ`
+
+One very important thing to note in the documentation is this part:
+
+```
+NvU8 NV_I2C_INFO_V3::i2cDevAddress
+
+The address of the I2C slave. The address should be shifted left by one. For example, the I2C address 0x50, often used for reading EDIDs, would be stored here as 0xA0. This matches the position within the byte sent by the master, as the last bit is reserved to specify the read or write direction.
+```
+
+This means the address we see for the i2c device here, should be shifted right to get the actual address and `0x54 >> 1` is `0x2a` (OMGLOL 42).
 
 ## WinDBG 102
 
@@ -379,6 +390,7 @@ gc"  // continue execution
 
 Now fireup GPUTweakII.exe, attach to it in WinDbg, set your magic breakpoint, and start changing fan speed in the GUI, and we start seeing stuff like:
 
+```
 <snip>
 WRITE DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=07, RegAddressSize=00000001, Data=01, Size=01, PortID=01, IsPortIDSet=00000001
 Debugger (not debuggee) time: Wed Apr  8 15:48:48.950 2020 (UTC + 2:00)
@@ -402,21 +414,25 @@ WRITE DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=06, RegAddressSiz
 Debugger (not debuggee) time: Wed Apr  8 15:48:49.032 2020 (UTC + 2:00)
 <snip>
 ```
-Nice! This shows all writes are indeed 1 byte long, which makes the WinDbg unpacking easier.
+
+Nice! This shows all writes are indeed 1 byte long, which makes the WinDbg unpacking easier. We also confirm "isDDCPort" is set to "false".
 
 This is a LOT of calls for what should be just a single command sent to the fans controler. But it turns out the RGB LED on the GPU will also
 do some show for you as you commit the new speed values.
 
-I decided to remove `gc` at the end of the BP macros, so I could see which call actually made the fan turn.
+I decided to remove `gc` at the end of the BP macros, so I could see which call actually made the fan turn, and after typing the go command
+a couple dozen times, finally:
+
 ```
 WRITE DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=41, RegAddressSize=00000001, Data=ff, Size=01, PortID=01, IsPortIDSet=00000001
 ```
-Got it! Setting Fans to 100% speed means I get a 0xFF there, and 60% gives me 0x99.
+
+Got it! Setting "External fans to 100% speed" in the GUI means I get a 0xFF there, and 60% gives me 0x99, which is indeed 60% of 0xff.
 
 
 ## Linux
 
-It's time to see if we're super lucky.
+It's time to see how lucky we are.
 
 Linux will scan for all interesting SMBus/I2C devices connected, and can expose them in a very simple to use way using the module `i2c-dev`.
 
@@ -434,9 +450,9 @@ i2c-0   smbus           SMBus PIIX4 adapter port 0 at 0b00      SMBus adapter
 i2c-7   i2c             NVIDIA i2c adapter 8 at 7:00.0          I2C adapter
 i2c-5   i2c             NVIDIA i2c adapter 6 at 7:00.0          I2C adapter
 ```
-Cool! NVIDIA stuff, this is promising
 
-Unfortunately sensors-detect won't find anything on these
+Cool! NVIDIA stuff, this is promising. Unfortunately sensors-detect won't find anything on these:
+
 ```
 Next adapter: NVIDIA i2c adapter 1 at 7:00.0 (i2c-2)
 Do you want to scan it? (yes/NO/selectively):
@@ -457,8 +473,8 @@ Next adapter: NVIDIA i2c adapter 8 at 7:00.0 (i2c-7)
 Do you want to scan it? (yes/NO/selectively):
 
 ```
-So lm-sensors didn't find anything there. Let's scan these devices anyway.
 
+So lm-sensors didn't find anything there. Let's scan these devices anyway.
 
 ```
 # i2cdetect -y 2
@@ -483,8 +499,9 @@ So lm-sensors didn't find anything there. Let's scan these devices anyway.
 60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 70: -- -- -- -- -- -- -- --
 ```
-Other i2c devices don't return much here
+Other i2c devices don't return much here, but we definitely got something at 0x2a!
 
+Time to try and talk to it. Install [i2c-tools](https://packages.debian.org/search?searchon=sourcenames&keywords=i2c-tools) and do:
 
 ```
 # i2cset 2 0x2a 0x41 0xFF
@@ -494,41 +511,172 @@ I will write to device file /dev/i2c-2, chip address 0x2a, data address
 Continue? [Y/n]
 ```
 
-0x19 being the minimum command at which fans start to actually go, which matches my fan specifics
+And BOOM! FANS GO BRRRR!
+
+While this would be kind of enough to write a very simple loop that would set the fan speed according to the GPU temperature (that you can already
+get with nvidia-smi in CLI on Linux), I wanted MORE.
+
+## Back to windows
+
+So we know how to talk to the fans, but can we also ask them to tell us more things?
+
+The GUI displays current fan speed (even when set automatically by the background service) and also current RPM of both fans.
+
+I was wondering how the current RPM could be known by the tool. It had to be measured at some point, since not all fans will rotate
+at the same maximum speed.
+
+Since we know about NvAPI_I2CWriteEx, let's now look for NvAPI_I2CReadEx.
+According to the [list of magic numbers](https://github.com/tokkenno/nvapi.net/wiki/NvAPI-Functions), this is going to be 0x4D7B0709.
+
+Search for this value in IDA and you'll find another function at 0x1001B320 very similar to sub_1001B250. This one being called (twice) in sub_1000EAD0,
+which is also very similar to sub_1000EB90. It is indeed using the same NV_I2C_INFO_V3 structure, so it's super easy to add a new breakpoint:
+
+```
+bp Vender!ReadI2C - 0x62cf "r$t0=poi(poi(@esp+4)+4);r$t1=by(poi(@esp+4)+8);r$t2=by(poi(@esp+4)+9);r$t3=poi(poi(poi(@esp+4)+c));r$t4=poi(poi(@esp+4)+10);r$t5=by(poi(poi(@esp+4)+14));r$t6=poi(poi(@esp+4)+18);r$t7=by(poi(@esp+4)+24);r$t8=poi(poi(@esp+4)+28);.echotime;.printf\"[%08x] READ DispMask=%08x,IsDDCPort=%02x,DevAddress=%02x, RegAddress=%02x, RegAddressSize=%08x, Data=%02x, Size=%02x, PortID=%02x, IsPortIDSet=%08x\\n\",@$tpid,@$t0,@$t1,@$t2,@$t3,@$t4,@$t5,@$t6,@$t7,@$t8;gc";
+
+```
+
+Now that we can trace reads & write, I wanted to trace all accesses to these methods from the GUI, as soon as it starts. I also started tracing
+its companion app "Monitor.exe", which is the one showing the nice graphs (and RPM values) and we now have even more info:
+
+For GPUTweakII.exe:
+```
+[00003a88] READ DispMask=00000000,IsDDCPort=00,DevAddress=00, RegAddress=00, RegAddressSize=00000000, Data=00, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 18:37:42.866 2020 (UTC + 2:00)
+[00003a88] READ DispMask=00000000,IsDDCPort=00,DevAddress=02, RegAddress=00, RegAddressSize=00000000, Data=00, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 18:37:42.877 2020 (UTC + 2:00)
+[00003a88] READ DispMask=00000000,IsDDCPort=00,DevAddress=04, RegAddress=00, RegAddressSize=00000000, Data=00, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 18:37:42.880 2020 (UTC + 2:00)
+[00003a88] READ DispMask=00000000,IsDDCPort=00,DevAddress=06, RegAddress=00, RegAddressSize=00000000, Data=00, Size=01, PortID=01, IsPortIDSet=00000001
+<snip>
+[00003a88] READ DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=20, RegAddressSize=00000001, Data=15, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 18:37:43.386 2020 (UTC + 2:00)
+[00003a88] READ DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=21, RegAddressSize=00000001, Data=89, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 18:37:43.641 2020 (UTC + 2:00)
+[00003a88] READ DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=41, RegAddressSize=00000001, Data=00, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 18:37:43.645 2020 (UTC + 2:00)
+[00003a88] READ DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=25, RegAddressSize=00000001, Data=80, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 18:37:43.650 2020 (UTC + 2:00)
+[00003a88] READ DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=26, RegAddressSize=00000001, Data=ff, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 18:37:43.653 2020 (UTC + 2:00)
+[00003a88] READ DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=28, RegAddressSize=00000001, Data=3c, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 18:37:43.656 2020 (UTC + 2:00)
+[00003a88] READ DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=29, RegAddressSize=00000001, Data=50, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 18:37:43.659 2020 (UTC + 2:00)
+[00003a88] READ DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=27, RegAddressSize=00000001, Data=32, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Wed Apr  8 18:37:43.747 2020 (UTC + 2:00)
+[00003a88] READ DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=41, RegAddressSize=00000001, Data=00, Size=01, PortID=01, IsPortIDSet=00000001
+<snip, more of the same>
+```
+Two things going on there: first we see the software trying all even (why?) i2c device addresses, maybe checking the status of the call to NvAPI_I2CReadEx
+(kind of the same as us doing i2c-detect in linux), then setting on address 0x54 (actually 0x2a), and then reading some values on registers
+0x20, 0x21, 0x25, 0x26, 0x27, 0x28, 0x29.
+
+The monitor tool is a bit different, it only goes over these 3 'reads':
+
+```
+Debugger (not debuggee) time: Thu Apr  9 14:35:57.900 2020 (UTC + 2:00)
+[0000299c] READ DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=44, RegAddressSize=00000001, Data=48, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Thu Apr  9 14:35:57.931 2020 (UTC + 2:00)
+[0000299c] READ DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=41, RegAddressSize=00000001, Data=ff, Size=01, PortID=01, IsPortIDSet=00000001
+Debugger (not debuggee) time: Thu Apr  9 14:35:57.946 2020 (UTC + 2:00)
+[0000299c] READ DispMask=00000000,IsDDCPort=00,DevAddress=54, RegAddress=48, RegAddressSize=00000001, Data=4b, Size=01, PortID=01, IsPortIDSet=00000001
+```
+0x41 is the fan speed (here fans were at 100%), and 2 values that are almost the same on 0x44 & 0x48, and seem to grow linearly with fan speed (in percent).
+Could it be RPM? The Monitor does report speed for each of the 2 external fans.
 
 
+## Back to Linux again
+
+In order to figure out what these values meant, I wrote a little script that would send a fan speed
+command every couple seconds, and then read the values of registers:
 
 ```
 $log = File.new("/tmp/log", 'a+')
 def read(bus, device, address)
   cmd = "i2cget -y #{bus} 0x#{device.to_s(16)} 0x#{address.to_s(16)}"
-  puts cmd
-  $log.write(cmd+"\n")
   io = IO.popen(cmd)
-  r  =io.read()
+  r = io.read()
   io.close()
   return r.strip()
 end
 
 def write(bus, device, address, val)
   cmd = "i2cset -y #{bus} 0x#{device.to_s(16)} 0x#{address.to_s(16)} 0x#{val.to_s(16)}"
-  puts cmd
   io = IO.popen(cmd)
-  $log.write(cmd+"\n")
-  r  =io.read()
   io.close()
-  return r
 end
 
 0.upto(255) do |i|
-  r = write(2, 0x2a, 0x41, i)
-  sleep 2
-  f1= read(2,0x2a,0x44)
-  f2= read(2,0x2a,0x48)
-  m =  "Wrote 0x#{i.to_s(16)}: f1: #{f1} f2: #{f2}\n"
+  write(2, 0x2a, 0x41, i)
+  sleep 3
+  f1 = read(2, 0x2a, 0x44)
+  f2 = read(2, 0x2a, 0x48)
+  m =  "Wrote 0x#{i.to_s(16)}. Read f1: #{f1} f2: #{f2}\n"
   puts m
   $log.write(m)
 end
 $log.close()
 
 ```
+
+I also went back to windows for a bit, manually set fan speed commands, and read the displayed values for fan RPM.
+It turns out that if the values read by i2c are multiplied by 30, I totally get the current RPM speed!
+
+![](docs/rpm.png)
+
+
+We can also see how any command below 30% just means the fans won't go. Each pc fan has a minimum RPM it won't actually
+go below of, this is due to the inertia of the fan blades. Later tests showed I could go lower on fan speed if I first set
+them over that minimum and gradually set a lower command (down to ~25% of max speed).
+
+So where is the 30 factor coming from?
+
+Fans usually report their speed via a dedicated wire, and they will send a certain number of pulses (usually 2) each rotation.
+Getting N pulsation per second, means N/2 rotation per second, and 60*N/2= N*30 RPM.
+
+So it would make sense that the register on addresses 0x44 & 0x48 are returning 'pulses per seconds' which need to be converted
+into RPM.
+
+## Even more research
+
+I now have enough information to write a very basic userland tool, but I also found more information with a bit more research
+
+### HWiNFO
+
+While searching whether the external fans could be controlled by another tool, I stumbled upon [HWiNFO](https://www.hwinfo.com/download/).
+It is a freeware that also does i2c probing and reports all kind of sensors reporting.
+
+I was surprised to see it is able to actually detect my external fans (but not control them). It report the sensor controller being
+used as "ITE IT8915FN".
+
+While I couldn't find any public datasheet for this chipset, this definitely made me remember of the values read by ASUS tools during the
+detection phase: 0x20 would return 0x15 and 0x21 would return 0x89, which definitely looks like a way to detect they are talking to the proper chip!
+
+### ASUSGPUFanServiceEx.exe
+
+GPUTweakII.exe also spins up another process called `ASUSGPUFanServiceEx.exe`, which, tracing it, seems like it's the process
+which makes sure to change fan speed depending on GPU temp.
+It does some other stuff on i2c:
+
+```
+Debugger (not debuggee) time: Wed Apr  8 15:02:04.839 2020 (UTC + 2:00)
+WRITE DevAddress=54, RegAddress=43, Data=00
+WRITE DevAddress=54, RegAddress=47, Data=00
+Debugger (not debuggee) time: Wed Apr  8 15:02:10.862 2020 (UTC + 2:00)
+READ DevAddress=54, RegAddress=45, Data=01
+WRITE DevAddress=54, RegAddress=43, Data=01
+Debugger (not debuggee) time: Wed Apr  8 15:02:10.866 2020 (UTC + 2:00)
+READ DevAddress=54, RegAddress=49, Data=01
+Debugger (not debuggee) time: Wed Apr  8 15:02:10.867 2020 (UTC + 2:00)
+WRITE DevAddress=54, RegAddress=47, Data=01
+```
+
+Windows is going to require something to use Nvapi.dll, and although Linux doesn't have a Nvapi.dll version, I can still talk
+directly to the i2c device. In order to make it play nicely with [fancontrol/](https://hwmon.wiki.kernel.org/lm_sensors), I need
+to write a [hwmon driver](https://www.kernel.org/doc/Documentation/hwmon/hwmon-kernel-api.txt).
+
+
+## TODO
+
+I have yet to figure out what 0x43, 0x47 & 0x49 are for. 0x43 & 0x47 are set to 0 then 1, every 4 minutes or so, while 0x49 ie read and contains 0x01.
