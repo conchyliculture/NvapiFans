@@ -1,6 +1,12 @@
 # NvapiFans
 Control external fans on some specific graphic cards
 
+## Installation
+
+See relevant documents per platform:
+  * [linux][docs/READLE-linux.md]
+  * [windows][docs/READLE-win.md]
+
 ## Write Up
 
 See [NOTES.md](NOTES.md)
