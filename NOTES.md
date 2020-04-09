@@ -389,3 +389,114 @@ It's time to see if we're super lucky.
 Linux will scan for all interesting SMBus/I2C devices connected, and can expose them in a very simple to use way using the module `i2c-dev`.
 
 Let's see if I can see a device with address 0x54.
+
+```
+# modprobe i2c-dev
+# i2cdetect -l
+i2c-3   i2c             NVIDIA i2c adapter 3 at 7:00.0          I2C adapter
+i2c-1   smbus           SMBus PIIX4 adapter port 2 at 0b00      SMBus adapter
+i2c-6   i2c             NVIDIA i2c adapter 7 at 7:00.0          I2C adapter
+i2c-4   i2c             NVIDIA i2c adapter 5 at 7:00.0          I2C adapter
+i2c-2   i2c             NVIDIA i2c adapter 1 at 7:00.0          I2C adapter
+i2c-0   smbus           SMBus PIIX4 adapter port 0 at 0b00      SMBus adapter
+i2c-7   i2c             NVIDIA i2c adapter 8 at 7:00.0          I2C adapter
+i2c-5   i2c             NVIDIA i2c adapter 6 at 7:00.0          I2C adapter
+```
+Cool! NVIDIA stuff, this is promising
+
+Unfortunately sensors-detect won't find anything on these
+```
+Next adapter: NVIDIA i2c adapter 1 at 7:00.0 (i2c-2)
+Do you want to scan it? (yes/NO/selectively): 
+
+Next adapter: NVIDIA i2c adapter 3 at 7:00.0 (i2c-3)
+Do you want to scan it? (yes/NO/selectively): 
+
+Next adapter: NVIDIA i2c adapter 5 at 7:00.0 (i2c-4)
+Do you want to scan it? (yes/NO/selectively): 
+
+Next adapter: NVIDIA i2c adapter 6 at 7:00.0 (i2c-5)
+Do you want to scan it? (yes/NO/selectively): 
+
+Next adapter: NVIDIA i2c adapter 7 at 7:00.0 (i2c-6)
+Do you want to scan it? (yes/NO/selectively): 
+
+Next adapter: NVIDIA i2c adapter 8 at 7:00.0 (i2c-7)
+Do you want to scan it? (yes/NO/selectively): 
+
+```
+So lm-sensors didn't find anything there. Let's scan these devices anyway.
+
+
+```
+# i2cdetect -y 2
+     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00:          -- -- -- -- -- 08 -- -- -- -- -- -- -- 
+10: -- -- -- -- -- 15 -- -- -- -- -- -- -- -- -- -- 
+20: -- -- -- -- -- -- -- 27 -- -- 2a -- -- -- -- -- 
+30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+60: -- -- -- -- -- -- -- -- 68 -- -- -- -- -- -- -- 
+70: -- -- -- -- -- -- -- --
+
+# i2cdetect -y 4
+     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00:          -- -- -- -- -- -- -- -- -- -- -- -- -- 
+10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+30: 30 31 32 33 34 35 36 37 -- -- -- -- -- -- -- -- 
+40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+50: 50 51 52 53 54 55 56 57 58 59 5a 5b 5c 5d 5e 5f 
+60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+70: -- -- -- -- -- -- -- --
+```
+Other i2c devices don't return much here
+
+
+```
+# i2cset 2 0x2a 0x41 0xFF
+WARNING! This program can confuse your I2C bus, cause data loss and worse!
+I will write to device file /dev/i2c-2, chip address 0x2a, data address
+0x41, data 0x15, mode byte.
+Continue? [Y/n]
+```
+
+0x19 being the minimum command at which fans start to actually go, which matches my fan specifics
+
+
+
+```
+$log = File.new("/tmp/log", 'a+')
+def read(bus, device, address)
+  cmd = "i2cget -y #{bus} 0x#{device.to_s(16)} 0x#{address.to_s(16)}"
+  puts cmd
+  $log.write(cmd+"\n")
+  io = IO.popen(cmd)
+  r  =io.read()
+  io.close()
+  return r.strip()
+end
+
+def write(bus, device, address, val)
+  cmd = "i2cset -y #{bus} 0x#{device.to_s(16)} 0x#{address.to_s(16)} 0x#{val.to_s(16)}"
+  puts cmd
+  io = IO.popen(cmd)
+  $log.write(cmd+"\n")
+  r  =io.read()
+  io.close()
+  return r
+end
+
+0.upto(255) do |i| 
+  r = write(2, 0x2a, 0x41, i)
+  sleep 2
+  f1= read(2,0x2a,0x44)
+  f2= read(2,0x2a,0x48)
+  m =  "Wrote 0x#{i.to_s(16)}: f1: #{f1} f2: #{f2}\n"
+  puts m
+  $log.write(m)
+end
+$log.close()
+
+```
