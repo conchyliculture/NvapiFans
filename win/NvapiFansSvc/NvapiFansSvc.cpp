@@ -181,8 +181,7 @@ void LogInfo(const HANDLE &event_log, const std::wstring &message) {
 }
 
 //Returns the last Win32 error, in string format. Returns an empty string if there is no error.
-std::wstring GetLastErrorAsString()
-{
+static std::wstring GetErrorAsString(DWORD error_value) {
     DWORD errorMessageID = GetLastError();
     if (errorMessageID == 0)
         return std::wstring(); //No error message has been recorded
@@ -360,7 +359,7 @@ int _tmain(int argc, TCHAR* argv[])
     {
         int err = GetLastError();
         std::cout << err << std::endl;
-        std::wcout << GetLastErrorAsString() << std::endl;
+        std::wcout << GetErrorAsString(err) << std::endl;
 
         return err;
     }
