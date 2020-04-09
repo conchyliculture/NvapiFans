@@ -36,7 +36,7 @@ The whole package comes with a bunch of binaries, DLLs, installed drivers and se
 
 I was hinted towards looking at DLL being loaded by GPUTweakII with [ProcessExplorer](https://docs.microsoft.com/en-us/sysinternals/downloads/process-explorer).
 
-![Process Explorer](docs/procexp.jpg)
+![Process Explorer](docs/procexp.png)
 
 Out of these, some of them come from the ASUS folder:
 
