@@ -3,7 +3,7 @@
 #include <windows.h>
 #include <codecvt>
 #include <locale>
-#include <shlobj.h> /* SHGetKnownFolderPath */ 
+#include <shlobj.h> /* SHGetKnownFolderPath */
 #include <tchar.h> /* for _T() macro */
 #include <iostream>
 #include <filesystem>
@@ -20,7 +20,7 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR* argv);
 VOID WINAPI ServiceCtrlHandler(DWORD);
 DWORD WINAPI ServiceWorkerThread(LPVOID lpParam);
 
-#define SERVICE_NAME _T("NvapiFans Service")  
+#define SERVICE_NAME _T("NvapiFans Service")
 #define CONFIG_DIR_NAME L"NvapiFansSvc"
 #define CONFIG_FILE_NAME L"config.json"
 
@@ -180,6 +180,14 @@ void LogSuccess(HANDLE event_log, std::wstring message) {
         NULL);               // no binary data
 }
 
+void FLog(std::string message) {
+    std::ofstream myfile;
+    myfile.open("C:\\ProgramData\\NvapiFansSvc\\log", std::ios::out | std::ios::app );
+    myfile << message << "\n";
+    myfile.close();
+}
+
+
 //Returns the last Win32 error, in string format. Returns an empty string if there is no error.
 void GetLastErrorAsString(std::wstring &message)
 {
@@ -201,7 +209,6 @@ void GetLastErrorAsString(std::wstring &message)
     message = result;
     return;
 }
-
 
 std::wstring utf8_decode(const std::string& str)
 {
@@ -239,6 +246,9 @@ bool parseConfig(HANDLE event_log, std::wstring config_path, service_config_t& s
             if (j["gpu_config"].count("start_fan_temp_C")) {
                 service_config.gpu_config.start_fan_temp_C = j["gpu_config"]["start_fan_temp_C"].get<int>();
             }
+            if (j["gpu_config"].count("speed_change_increments")) {
+                service_config.gpu_config.speed_change_increments = j["gpu_config"]["speed_change_increments"].get<int>();
+            }
         }
         return true;
     }
@@ -271,7 +281,7 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
         std::filesystem::path appdata_directory = appdata;
 
         std::filesystem::path config_directory_path = appdata_directory / CONFIG_DIR_NAME;
- 
+
         if (!std::filesystem::exists(config_directory_path)) {
             LogError(event_log, L"Can't find config file parent: " + config_directory_path.wstring() + L". Creating it");
             bool res = std::filesystem::create_directory(config_directory_path);
@@ -286,16 +296,16 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
             LogError(event_log, L"Can't find config file: " + config_path.wstring());
         }
         else {
-            LogSuccess(event_log, L"I found: " + config_path.wstring());
             const std::wstring config_path_w = config_path.wstring();
             parseConfig(event_log, config_path_w, service_config);
         }
 
         std::wstring message =
             L"Applying config:\n "
-            "\t- Target GPU temp: " + std::to_wstring(service_config.gpu_config.target_temp_max_C) + L"C" +
-            L"\t- Min Speed: " + std::to_wstring(service_config.gpu_config.min_fanspeed_percent) + L"%" +
-            L"\t- Start Fan: " + std::to_wstring(service_config.gpu_config.start_fan_temp_C) + L"C"
+            "\t- Target GPU temp: " + std::to_wstring(service_config.gpu_config.target_temp_max_C) + L"C\n" +
+            L"\t- Min Speed: " + std::to_wstring(service_config.gpu_config.min_fanspeed_percent) + L"%\n" +
+            L"\t- Start Fan: " + std::to_wstring(service_config.gpu_config.start_fan_temp_C) + L"C\n"+
+            L"\t- Fan speed changes increments: " + std::to_wstring(service_config.gpu_config.speed_change_increments)
             ;
         LogSuccess(event_log, message);
 
@@ -311,6 +321,42 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
     return true;
 }
 
+static int increaseSpeed(const int current_speed, const service_config_t &config_service) {
+    if (current_speed == 0xff) {
+        // can't go faster
+        return current_speed;
+    }
+    else if (current_speed > config_service.gpu_config.start_fan_temp_C) {
+        return current_speed + config_service.gpu_config.speed_change_increments;
+    }
+}
+
+static int getNewSpeed(const service_config_t& service_config, const int current_speed, const int current_temp, const int current_gpu_usage) {
+    if (current_temp <= (service_config.gpu_config.target_temp_max_C-10)) { // some margin
+        // We cool. is GPU not doing stuff?
+        if (current_gpu_usage <= 50) {
+            // GPU is not too loaded, slow down fan, but not below 0.
+            if (current_speed >= service_config.gpu_config.speed_change_increments) {
+                return current_speed - service_config.gpu_config.speed_change_increments;
+            }
+        }
+    }
+    else {
+        // Whoa we are getting warm limit temp
+        if (current_gpu_usage >= 50) {
+            // We expect to get more warm
+            // Fanning more (hopefully) means temperature goes down next time
+            if (current_speed < 0xFF) {
+                return current_speed + (service_config.gpu_config.speed_change_increments * 2);
+            }
+
+        }
+
+    }
+    // do nothing
+    return current_speed;
+}
+
 DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 {
     NvApiClient api;
@@ -321,37 +367,71 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 
     bool res = loadConfig(event_log, service_config);
     if (!res) {
-        LogError(event_log, L"Could not load config, using defaults");
+        //LogError(event_log, L"Could not load config, using defaults");
+        FLog("Could not load config, using defaults");
     }
     LogSuccess(event_log, L"Config loaded");
-
     std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu;
+    res = api.getGPUHandles(list_gpu);
+    if (!res) {
+        //LogError(event_log, L"Error calling getGPUHandles");
+        FLog("Error calling getGPUHandles");
+    }
+
+    if (list_gpu.size() == 0) {
+        FLog("Could not find any Nvidia GPU");
+       // LogError(event_log, L"Could not find any Nvidia GPU");
+        return ERROR;// Maybe find a better error but eh
+    }
+
     bool detected = true;
     for (NV_PHYSICAL_GPU_HANDLE& gpu : list_gpu) {
         detected &= api.detectI2CDevice(gpu);
     }
     if (!detected) {
-        LogError(event_log, L"Failed to detect all GPU I2C devices");
+        FLog("Failed to detect all GPU I2C devices");
+       // LogError(event_log, L"Failed to detect all GPU I2C devices");
         return ERROR_BAD_COMMAND; // Maybe find a better error but eh
     }
 
     //  Periodically check if the service has been requested to stop
     while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
     {
-        
+        service_config_t config_service{};
         bool res;
-        std::string gpuName;
-        res = api.getGPUHandles(list_gpu);
 
         int index = 0;
         for (NV_PHYSICAL_GPU_HANDLE &gpu : list_gpu) {
             int currentTemp = api.getGPUTemperature(gpu);
             if (currentTemp == -1) {
-                LogError(event_log, L"Error calling getGPUTemperature for GPU id " + index);
+                FLog("Error calling getGPUTemperature for GPU ");
+                continue;
             }
+
+            int currentFanSpeed = api.getExternalFanSpeedPercent(gpu);
+            if (currentFanSpeed < 0) {
+               // LogError(event_log, L"Error calling getExternalFanSpeedPercent for GPU");
+                FLog("Error calling getExternalFanSpeedPercent for GPU");
+                continue;
+            }
+            int utilization = api.getGPUUsage(gpu);
+            if (utilization < 0) {
+                FLog("Error calling getGPUUsage for GPU");
+               // LogError((event_log, L"Error calling getGPUUsage for GPU");
+                continue;
+            }
+            int new_speed = getNewSpeed(service_config, currentFanSpeed, currentTemp, utilization);
+            res = api.setExternalFanSpeedPercent(gpu, new_speed);
+            if (!res) {
+                FLog("Error calling setExternalFanSpeedPercent");
+                //LogError(event_log, L"Error calling setExternalFanSpeedPercent");
+                continue;
+            }
+            FLog("Setting new fan speed: " + std::to_string(new_speed)+ "%");
+          // LogError(event_log, L"Setting new GPU temp: "+ new_speed);
             index += 1;
         }
-        Sleep(1000);
+        Sleep(2000);
     }
 
     return ERROR_SUCCESS;
@@ -377,7 +457,7 @@ int _tmain(int argc, TCHAR* argv[])
 
     return 0;
 }
-
+/*
 int main(int argc, TCHAR* argv[]) {
     HANDLE event_log = RegisterEventSource(NULL, L"NvapiFansSvc");
     service_config_t service_config{};
@@ -389,3 +469,4 @@ int main(int argc, TCHAR* argv[]) {
 
     return 0;
 }
+*/
