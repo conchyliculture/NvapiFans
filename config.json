@@ -1,0 +1,8 @@
+{
+    "version": 1,
+    "gpu_config": {
+        "target_temp_max_C": 65,
+        "min_fanspeed_percent": 10,
+        "start_fan_temp_C": 45
+    }
+}
