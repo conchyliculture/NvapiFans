@@ -154,7 +154,7 @@ VOID WINAPI ServiceCtrlHandler(DWORD CtrlCode)
     }
 }
 
-void LogError(HANDLE event_log, std::wstring message) {
+void LogError(HANDLE event_log, const std::wstring &message) {
     const wchar_t* buffer = message.c_str();
     ReportEvent(event_log,        // event log handle
         EVENTLOG_ERROR_TYPE, // event type
@@ -167,10 +167,10 @@ void LogError(HANDLE event_log, std::wstring message) {
         NULL);               // no binary data
 }
 
-void LogSuccess(HANDLE event_log, std::wstring message) {
+void LogInfo(HANDLE event_log, const std::wstring &message) {
     const wchar_t* buffer = message.c_str();
     ReportEvent(event_log,        // event log handle
-        EVENTLOG_SUCCESS, // event type
+        EVENTLOG_INFORMATION_TYPE, // event type
         0,                   // event category
         1,                   // event identifier
         NULL,                // no security identifier
@@ -189,25 +189,17 @@ void FLog(std::string message) {
 
 
 //Returns the last Win32 error, in string format. Returns an empty string if there is no error.
-void GetLastErrorAsString(std::wstring &message)
-{
-    //Get the error message, if any.
-    DWORD errorMessageID = GetLastError();
-    if (errorMessageID == 0)
-        return; //No error message has been recorded
-
+static std::wstring GetErrorAsString(DWORD error_value) {
     LPVOID  lpMsgBuf;
     DWORD  size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpMsgBuf, 0, NULL);
-    if (size <=0 ) {
-        return;
-    }
+        NULL, error_value, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpMsgBuf, 0, NULL);
+    if (size <=0 )
+        return std::wstring();
+
     LPCWSTR lpMsgStr = (LPCWSTR)lpMsgBuf;
-    std::wstring result(lpMsgStr, lpMsgStr + size);
-    //Free the buffer.
+    std::wstring message(lpMsgStr, lpMsgStr + size);
     LocalFree(lpMsgBuf);
-    message = result;
-    return;
+    return message;
 }
 
 std::wstring utf8_decode(const std::string& str)
@@ -219,7 +211,9 @@ std::wstring utf8_decode(const std::string& str)
     return wstrTo;
 }
 
-bool parseConfig(HANDLE event_log, std::wstring config_path, service_config_t& service_config) {
+bool parseConfig(HANDLE event_log, const std::wstring& config_path, service_config_t& service_config) {
+
+    service_config_t draft_config = {};
     try {
         nlohmann::json j;
         std::ifstream ifs(config_path);
@@ -238,19 +232,18 @@ bool parseConfig(HANDLE event_log, std::wstring config_path, service_config_t& s
 
         if (j.count("gpu_config")) {
             if (j["gpu_config"].count("target_temp_max_C")) {
-                service_config.gpu_config.target_temp_max_C = j["gpu_config"]["target_temp_max_C"].get<int>();
+                draft_config.gpu_config.target_temp_max_C = j["gpu_config"]["target_temp_max_C"].get<int>();
             }
             if (j["gpu_config"].count("min_fanspeed_percent")) {
-                service_config.gpu_config.min_fanspeed_percent = j["gpu_config"]["min_fanspeed_percent"].get<int>();
+                draft_config.gpu_config.min_fanspeed_percent = j["gpu_config"]["min_fanspeed_percent"].get<int>();
             }
             if (j["gpu_config"].count("start_fan_temp_C")) {
-                service_config.gpu_config.start_fan_temp_C = j["gpu_config"]["start_fan_temp_C"].get<int>();
+                draft_config.gpu_config.start_fan_temp_C = j["gpu_config"]["start_fan_temp_C"].get<int>();
             }
             if (j["gpu_config"].count("speed_change_increments")) {
                 service_config.gpu_config.speed_change_increments = j["gpu_config"]["speed_change_increments"].get<int>();
             }
         }
-        return true;
     }
     catch (nlohmann::json::parse_error& e)
     {
@@ -259,15 +252,17 @@ bool parseConfig(HANDLE event_log, std::wstring config_path, service_config_t& s
         errmsg += "exception id: " + std::to_string(e.id) + "\n";
         errmsg += "byte position of error: " + std::to_string(e.byte) + "\n";
        LogError(event_log, utf8_decode(errmsg));
-    //   LogError(event_log, std::wstring_convert(errmsg));
+       return false;
     }
     catch (nlohmann::json::type_error& e) {
         std::string errmsg = "Error parsing json:";
         errmsg += "message: " + (std::string)(e.what()) + "\n";
         errmsg += "exception id: " + std::to_string(e.id) + "\n";
         LogError(event_log, utf8_decode(errmsg));
+        return false;
     }
-    return false;
+    service_config = draft_config;
+    return true;
 }
 
 bool loadConfig(HANDLE event_log, service_config_t &service_config) {
@@ -275,7 +270,7 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
     LPWSTR szPath;
 
     // Get path for each computer, non-user specific and non-roaming data.
-    if (SHGetKnownFolderPath(FOLDERID_ProgramData, NULL, 0, &szPath) >= 0) {
+    if (SHGetKnownFolderPath(FOLDERID_ProgramData, NULL, 0, &szPath) == S_OK) {
 
         std::wstring appdata = szPath;
         std::filesystem::path appdata_directory = appdata;
@@ -287,6 +282,7 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
             bool res = std::filesystem::create_directory(config_directory_path);
             if (!res) {
                 LogError(event_log, L"Could not create directory: " + config_directory_path.wstring());
+                CoTaskMemFree(szPath);
                 return false;
             }
         }
@@ -309,13 +305,10 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
             ;
         LogSuccess(event_log, message);
 
-
         CoTaskMemFree(szPath);
     }
     else {
-        std::wstring error_message;
-        GetLastErrorAsString(error_message);
-        LogError(event_log, L"SHGetKnownFolderPath failed: " + error_message);
+        LogError(event_log, L"SHGetKnownFolderPath failed");
         return false;
     }
     return true;
@@ -363,7 +356,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
     HANDLE event_log = RegisterEventSource(NULL, L"NvapiFansSvc");
     service_config_t service_config{};
 
-    LogSuccess(event_log, L"Worker created");
+    LogInfo(event_log, L"Worker created");
 
     bool res = loadConfig(event_log, service_config);
     if (!res) {
@@ -401,7 +394,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
         bool res;
 
         int index = 0;
-        for (NV_PHYSICAL_GPU_HANDLE &gpu : list_gpu) {
+        for (NV_PHYSICAL_GPU_HANDLE gpu : list_gpu) {
             int currentTemp = api.getGPUTemperature(gpu);
             if (currentTemp == -1) {
                 FLog("Error calling getGPUTemperature for GPU ");
@@ -449,24 +442,11 @@ int _tmain(int argc, TCHAR* argv[])
     if (StartServiceCtrlDispatcher(dispatchTable) == FALSE)
     {
         int err = GetLastError();
-        std::wstring errormsg;
-        GetLastErrorAsString(errormsg);
         std::cout << err << std::endl;
-        std::wcout << errormsg << std::endl;
+        std::wcout << GetErrorAsString(err) << std::endl;
+
+        return err;
     }
 
     return 0;
 }
-/*
-int main(int argc, TCHAR* argv[]) {
-    HANDLE event_log = RegisterEventSource(NULL, L"NvapiFansSvc");
-    service_config_t service_config{};
-
-    bool res = loadConfig(event_log, service_config);
-    if (!res) {
-        LogError(event_log, L"Could not load config, using defaults");
-    }
-
-    return 0;
-}
-*/

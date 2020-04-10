@@ -9,6 +9,15 @@
 #include <math.h>       /* ceil & floor */
 #include "NvapiFansLib.h"
 
+
+static int hexToPercent(byte hex) {
+	return (int)floor((hex * 100.0) / 0xFF);
+};
+static int percentToHex(byte hex) {
+	int hex_val = (int)hex;
+	return (int)ceil((hex_val * 0xFF) / 100.0);
+};
+
 NvApiClient::NvApiClient() {
 
 	#ifdef _WIN64
@@ -50,21 +59,13 @@ NvApiClient::NvApiClient() {
 	}
 }
 
-int NvApiClient::hexToPercent(byte hex) {
-	return (int)floor((hex * 100.0) / 0xFF);
-};
-int NvApiClient::percentToHex(byte hex) {
-	int hex_val = (int)hex;
-	return (int)ceil((hex_val * 0xFF) / 100.0);
-};
-
-void NvApiClient::getNvAPIError(NvAPI_Status status, std::string message) {
+void NvApiClient::getNvAPIError(NvAPI_Status status, std::string &message) const {
 	NvAPI_ShortString nv_err;
 	NvAPI_GetErrorMessage(status, nv_err);
 	message = nv_err;
 };
 
-bool NvApiClient::I2CReadByteEx(NV_PHYSICAL_GPU_HANDLE &gpu, byte deviceAddress, byte registerAddress, byte *data) {
+bool NvApiClient::I2CReadByteEx(NV_PHYSICAL_GPU_HANDLE gpu, byte deviceAddress, byte registerAddress, byte *data) const {
 	NvAPI_Status status;
 	NV_I2C_INFO pI2CInfo;
 
@@ -98,7 +99,7 @@ bool NvApiClient::I2CReadByteEx(NV_PHYSICAL_GPU_HANDLE &gpu, byte deviceAddress,
 	return true;
 }
 
-bool NvApiClient::I2CWriteByteEx(NV_PHYSICAL_GPU_HANDLE& gpu, byte deviceAddress, byte registerAddress, byte value) {
+bool NvApiClient::I2CWriteByteEx(NV_PHYSICAL_GPU_HANDLE gpu, byte deviceAddress, byte registerAddress, byte value) const {
 	NvAPI_Status status;
 	NV_I2C_INFO pI2CInfo;
 
@@ -132,7 +133,7 @@ bool NvApiClient::I2CWriteByteEx(NV_PHYSICAL_GPU_HANDLE& gpu, byte deviceAddress
 	return true;
 }
 
-bool NvApiClient::getNvapiVersion(std::string &version) {
+bool NvApiClient::getNvapiVersion(std::string &version) const {
 	NvAPI_Status status;
 
 	NvAPI_ShortString v;
@@ -148,7 +149,7 @@ bool NvApiClient::getNvapiVersion(std::string &version) {
 	return true;
 };
 
-bool NvApiClient::getGPUHandles(std::vector<NV_PHYSICAL_GPU_HANDLE> &list_gpus) {
+bool NvApiClient::getGPUHandles(std::vector<NV_PHYSICAL_GPU_HANDLE> &list_gpus) const {
 	NvAPI_Status status;
 
 	NV_PHYSICAL_GPU_HANDLE gh[NVAPI_MAX_PHYSICAL_GPUS];
@@ -164,7 +165,7 @@ bool NvApiClient::getGPUHandles(std::vector<NV_PHYSICAL_GPU_HANDLE> &list_gpus) 
 	return true;
 }
 
-bool NvApiClient::getGPUFullname(NV_PHYSICAL_GPU_HANDLE &handle, std::string& name) {
+bool NvApiClient::getGPUFullname(NV_PHYSICAL_GPU_HANDLE handle, std::string& name) const {
 	NvAPI_Status status;
 
 	NvAPI_ShortString n;
@@ -179,7 +180,7 @@ bool NvApiClient::getGPUFullname(NV_PHYSICAL_GPU_HANDLE &handle, std::string& na
 	return true;
 }
 
-int NvApiClient::getExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle) {
+int NvApiClient::getExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE handle) const {
 	bool res;
 	
 	NvU8 speed_hex;
@@ -190,7 +191,7 @@ int NvApiClient::getExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle) {
 	return hexToPercent(speed_hex);
 }
 
-int NvApiClient::getExternalFanSpeedRPM(NV_PHYSICAL_GPU_HANDLE& handle, int nb) {
+int NvApiClient::getExternalFanSpeedRPM(NV_PHYSICAL_GPU_HANDLE handle, int nb) const {
 	bool res;
 	int reg = 0;
 	switch (nb) {
@@ -208,7 +209,7 @@ int NvApiClient::getExternalFanSpeedRPM(NV_PHYSICAL_GPU_HANDLE& handle, int nb) 
 	return speed_rpm * 30;
 }
 
-bool NvApiClient::setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle, int percent) {
+bool NvApiClient::setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE handle, int percent) const {
 	bool res;
 
 	byte hex_val = percentToHex(percent);
@@ -220,7 +221,7 @@ bool NvApiClient::setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle, int
 	return true;
 }
 
-bool NvApiClient::getTemps(NV_PHYSICAL_GPU_HANDLE& handle, NV_GPU_THERMAL_SETTINGS& infos) {
+bool NvApiClient::getTemps(NV_PHYSICAL_GPU_HANDLE handle, NV_GPU_THERMAL_SETTINGS& infos) const  {
 	NvAPI_Status status;
 	infos.version = NV_GPU_THERMAL_SETTINGS_VER_2;
 	status = NvAPI_GPU_GetThermalSettings(handle, NVAPI_THERMAL_TARGET_ALL, &infos);
@@ -233,7 +234,7 @@ bool NvApiClient::getTemps(NV_PHYSICAL_GPU_HANDLE& handle, NV_GPU_THERMAL_SETTIN
 	return true;
 }
 
-int NvApiClient::getGPUTemperature(NV_PHYSICAL_GPU_HANDLE& handle) {
+int NvApiClient::getGPUTemperature(NV_PHYSICAL_GPU_HANDLE handle) const {
 	bool res = true;
 	NV_GPU_THERMAL_SETTINGS infos{};
 	infos.version = NV_GPU_THERMAL_SETTINGS_VER_2;

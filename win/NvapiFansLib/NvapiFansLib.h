@@ -314,24 +314,20 @@ private:
     NvAPI_GPU_GetThermalSettings_t NvAPI_GPU_GetThermalSettings = nullptr;
     NvAPI_GPU_GetDynamicPstatesInfoEx_t NvAPI_GPU_GetDynamicPstatesInfoEx = nullptr;
 
-    void getNvAPIError(NvAPI_Status status, std::string message);
-    bool I2CReadByteEx(NV_PHYSICAL_GPU_HANDLE &gpu, byte deviceAddress, byte registerAddress, byte *data);
-    bool I2CWriteByteEx(NV_PHYSICAL_GPU_HANDLE& gpu, byte deviceAddress, byte registerAddress, byte value);
-    int hexToPercent(byte hex);
-    int percentToHex(byte hex);
+    bool I2CReadByteEx(NV_PHYSICAL_GPU_HANDLE gpu, byte deviceAddress, byte registerAddress, byte* data) const;
+    bool I2CWriteByteEx(NV_PHYSICAL_GPU_HANDLE gpu, byte deviceAddress, byte registerAddress, byte value) const;
 
 public:
 	NvApiClient();
-	bool getNvapiVersion(std::string& version);
-	bool getGPUHandles(std::vector<NV_PHYSICAL_GPU_HANDLE>& gpuHandles);
-	bool getGPUFullname(NV_PHYSICAL_GPU_HANDLE& handle, std::string& name);
-    int getExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle);
-    int getExternalFanSpeedRPM(NV_PHYSICAL_GPU_HANDLE& handle, int nb);
-    bool setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE& handle, int percent);
-    bool getTemps(NV_PHYSICAL_GPU_HANDLE& handle, NV_GPU_THERMAL_SETTINGS& infos);
-    int getGPUTemperature(NV_PHYSICAL_GPU_HANDLE& handle);
+	bool getNvapiVersion(std::string& version) const;
+	bool getGPUHandles(std::vector<NV_PHYSICAL_GPU_HANDLE>& gpuHandles) const;
+	bool getGPUFullname(NV_PHYSICAL_GPU_HANDLE handle, std::string& name) const;
+    int getExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE handle) const;
+    int getExternalFanSpeedRPM(NV_PHYSICAL_GPU_HANDLE handle, int nb) const;
+    bool setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE handle, int percent) const;
+    bool getTemps(NV_PHYSICAL_GPU_HANDLE handle, NV_GPU_THERMAL_SETTINGS& infos) const;
     bool detectI2CDevice(NV_PHYSICAL_GPU_HANDLE& handle);
+    int getGPUTemperature(NV_PHYSICAL_GPU_HANDLE handle) const;
     int getGPUUsage(NV_PHYSICAL_GPU_HANDLE& handle);
-
 };
 
