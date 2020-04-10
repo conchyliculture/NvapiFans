@@ -378,7 +378,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
     }
 
     bool detected = true;
-    for (NV_PHYSICAL_GPU_HANDLE& gpu : list_gpu) {
+    for (NV_PHYSICAL_GPU_HANDLE gpu : list_gpu) {
         detected &= api.detectI2CDevice(gpu);
     }
     if (!detected) {

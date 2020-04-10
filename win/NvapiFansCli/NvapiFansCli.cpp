@@ -14,7 +14,7 @@ bool validateGPUId(const std::vector<NV_PHYSICAL_GPU_HANDLE>& list_gpu, int gpuI
 		return false;
 	}
 
-	if (gpuId > 0 && gpuId >= (int)list_gpu.size()) {
+	if (gpuId >= (int)list_gpu.size()) {
 		std::cerr << "GPU id provided is " << gpuId << ". Max GPU id is " << list_gpu.size() - 1 << std::endl;
 		return false;
 	}
@@ -68,7 +68,7 @@ bool showGPUInfos(const NvApiClient& api, NV_PHYSICAL_GPU_HANDLE gpu) {
 	return res;
 }
 
-std::vector<NV_PHYSICAL_GPU_HANDLE> getAllGPUs(NvApiClient api) {
+std::vector<NV_PHYSICAL_GPU_HANDLE> getAllGPUs(const NvApiClient& api) {
 	std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu;
 	bool res = api.getGPUHandles(list_gpu);
 	if (!res) {
@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
 
 		std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu = getAllGPUs(api);
 		bool detected = true;
-		for (NV_PHYSICAL_GPU_HANDLE& gpu : list_gpu) {
+		for (NV_PHYSICAL_GPU_HANDLE gpu : list_gpu) {
 			detected &= api.detectI2CDevice(gpu);
 		}
 		if (!detected) {
