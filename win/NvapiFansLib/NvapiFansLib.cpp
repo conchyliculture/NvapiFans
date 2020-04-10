@@ -257,7 +257,6 @@ bool NvApiClient::detectI2CDevice(NV_PHYSICAL_GPU_HANDLE handle) const {
 	// Asus GPUTweakII detection mechanism
 	NvU8 high ;
 	NvU8 low;
-
 	int chipId = 0;
 
 	res = I2CReadByteEx(handle, I2C_EXTFAN_DEVICE_ADDRESS, I2C_DEVICE_IDENTIFIER_HIGH_REGISTER, &high);

@@ -14,7 +14,7 @@ bool validateGPUId(const std::vector<NV_PHYSICAL_GPU_HANDLE>& list_gpu, int gpuI
 		return false;
 	}
 
-	if (gpuId > 0 && gpuId >= (int)list_gpu.size()) {
+	if (gpuId >= (int)list_gpu.size()) {
 		std::cerr << "GPU id provided is " << gpuId << ". Max GPU id is " << list_gpu.size() - 1 << std::endl;
 		return false;
 	}
