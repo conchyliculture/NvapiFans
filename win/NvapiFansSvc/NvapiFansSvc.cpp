@@ -303,7 +303,7 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
             L"\t- Start Fan: " + std::to_wstring(service_config.gpu_config.start_fan_temp_C) + L"C\n"+
             L"\t- Fan speed changes increments: " + std::to_wstring(service_config.gpu_config.speed_change_increments)
             ;
-        LogSuccess(event_log, message);
+        LogInfo(event_log, message);
 
         CoTaskMemFree(szPath);
     }
@@ -363,7 +363,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
         //LogError(event_log, L"Could not load config, using defaults");
         FLog("Could not load config, using defaults");
     }
-    LogSuccess(event_log, L"Config loaded");
+    LogInfo(event_log, L"Config loaded");
     std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu;
     res = api.getGPUHandles(list_gpu);
     if (!res) {

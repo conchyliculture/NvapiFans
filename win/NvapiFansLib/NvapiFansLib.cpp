@@ -275,7 +275,7 @@ bool NvApiClient::detectI2CDevice(NV_PHYSICAL_GPU_HANDLE handle) const {
 	return false;
 }
 
-int NvApiClient::getGPUUsage(NV_PHYSICAL_GPU_HANDLE& handle) {
+int NvApiClient::getGPUUsage(NV_PHYSICAL_GPU_HANDLE handle) const {
 	NvU32 utilization = -1;
 	NV_GPU_DYNAMIC_PSTATES_INFO_EX GPUperf;
 	GPUperf.version = MAKE_NVAPI_VERSION(NV_GPU_DYNAMIC_PSTATES_INFO_EX, 1);
