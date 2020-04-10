@@ -57,10 +57,11 @@ NvApiClient::NvApiClient() {
 	}
 }
 
-void NvApiClient::getNvAPIError(NvAPI_Status status, std::string &message) const {
+std::string NvApiClient::getNvAPIError(NvAPI_Status status) const {
 	NvAPI_ShortString nv_err;
 	NvAPI_GetErrorMessage(status, nv_err);
-	message = nv_err;
+
+	return nv_err;
 };
 
 bool NvApiClient::I2CReadByteEx(NV_PHYSICAL_GPU_HANDLE gpu, byte deviceAddress, byte registerAddress, byte *data) const {
@@ -90,7 +91,7 @@ bool NvApiClient::I2CReadByteEx(NV_PHYSICAL_GPU_HANDLE gpu, byte deviceAddress, 
 	status = NvAPI_I2CReadEx(gpu, &pI2CInfo, &unknown);
 	if (status != NVAPI_OK) {
 		std::string message;
-		getNvAPIError(status, message);
+		message = getNvAPIError(status);
 		std::cerr << "Error calling NvAPI_I2CReadEx: " << message << std::endl;
 		return false;
 	};
@@ -124,7 +125,7 @@ bool NvApiClient::I2CWriteByteEx(NV_PHYSICAL_GPU_HANDLE gpu, byte deviceAddress,
 	status = NvAPI_I2CWriteEx(gpu, &pI2CInfo, &unknown);
 	if (status != NVAPI_OK) {
 		std::string message;
-		getNvAPIError(status, message);
+		message = getNvAPIError(status);
 		std::cerr << "Error calling NvAPI_I2CWriteEx: " << message << std::endl;
 		return false;
 	};
@@ -138,7 +139,7 @@ bool NvApiClient::getNvapiVersion(std::string &version) const {
 	status = NvAPI_GetInterfaceVersionString(v);
 	if (status != NVAPI_OK) {
 		std::string message;
-		getNvAPIError(status, message);
+		message = getNvAPIError(status);
 		std::cerr << "Error calling NvAPI_GetInterfaceVersionString: " << message << std::endl;
 		return false;
 	};
@@ -155,7 +156,7 @@ bool NvApiClient::getGPUHandles(std::vector<NV_PHYSICAL_GPU_HANDLE> &list_gpus) 
 	status = NvAPI_EnumPhysicalGPUs(gh, &gpu_count);
 	if (status != NVAPI_OK) {
 		std::string message;
-		getNvAPIError(status, message);
+		message = getNvAPIError(status);
 		std::cerr << "Error calling NvAPI_EnumPhysicalGPUs: " << message << std::endl;
 		return false;
 	};
@@ -170,7 +171,7 @@ bool NvApiClient::getGPUFullname(NV_PHYSICAL_GPU_HANDLE handle, std::string& nam
 	status = NvAPI_GPU_GetFullName(handle, n);
 	if ( status != NVAPI_OK) {
 		std::string message;
-		getNvAPIError(status, message);
+		message = getNvAPIError(status);
 		std::cerr << "Error calling getGPUFullname: " << message << std::endl;
 		return false;
 	};
@@ -234,7 +235,7 @@ bool NvApiClient::getTemps(NV_PHYSICAL_GPU_HANDLE handle, NV_GPU_THERMAL_SETTING
 	status = NvAPI_GPU_GetThermalSettings(handle, NVAPI_THERMAL_TARGET_ALL, &infos);
 	if (status != NVAPI_OK) {
 		std::string message;
-		getNvAPIError(status, message);
+		message = getNvAPIError(status);
 		std::cerr << "Error calling NvAPI_GPU_GetThermalSettings: " << message << std::endl;
 		return false;
 	};
@@ -289,7 +290,7 @@ int NvApiClient::getGPUUsage(NV_PHYSICAL_GPU_HANDLE handle) const {
 	NvAPI_Status status = NvAPI_GPU_GetDynamicPstatesInfoEx(handle, &GPUperf);
 	if (status != NVAPI_OK) {
 		std::string message;
-		getNvAPIError(status, message);
+		message = getNvAPIError(status);
 		std::cerr << "Error calling NvAPI_GPU_GetThermalSettings: " << message << std::endl;
 		return -1;
 	}

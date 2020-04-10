@@ -314,13 +314,12 @@ private:
     NvAPI_GPU_GetThermalSettings_t NvAPI_GPU_GetThermalSettings = nullptr;
     NvAPI_GPU_GetDynamicPstatesInfoEx_t NvAPI_GPU_GetDynamicPstatesInfoEx = nullptr;
 
+public:
+    NvApiClient();
     bool I2CReadByteEx(NV_PHYSICAL_GPU_HANDLE gpu, byte deviceAddress, byte registerAddress, byte* data) const;
     bool I2CWriteByteEx(NV_PHYSICAL_GPU_HANDLE gpu, byte deviceAddress, byte registerAddress, byte value) const;
-    void getNvAPIError(NvAPI_Status status, std::string& message) const;
-
-public:
-	NvApiClient();
-	bool getNvapiVersion(std::string& version) const;
+    std::string getNvAPIError(NvAPI_Status status) const;
+    bool getNvapiVersion(std::string& version) const;
 	bool getGPUHandles(std::vector<NV_PHYSICAL_GPU_HANDLE>& gpuHandles) const;
 	bool getGPUFullname(NV_PHYSICAL_GPU_HANDLE handle, std::string& name) const;
     int getExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE handle) const;

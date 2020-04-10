@@ -40,18 +40,16 @@ bool showGPUInfos(const NvApiClient& api, NV_PHYSICAL_GPU_HANDLE gpu) {
 	utilization = api.getGPUUsage(gpu);
 
 	std::cout << "- " << gpu_name << std::endl;
-	std::cout << "  * GPU Utilization: " << utilization << "%" << std::endl;
-	std::cout << "  * External fan speed was set at " << speedCmd << "%" << std::endl;
-	std::cout << "  * Actual External fan1 Speed: " << actualSpeedRPM1 << " RPM" << std::endl;
-	std::cout << "  * Actual External fan2 Speed: " << actualSpeedRPM2 << " RPM" << std::endl;
+	std::cout << "  * GPU Utilization: " << (utilization == -1 ? "ERROR" : std::to_string(utilization)) << "%" << std::endl;
+	std::cout << "  * External fan speed was set at " << (speedCmd == -1 ? "ERROR" : std::to_string(speedCmd)) << "%" << std::endl;
+	std::cout << "  * Actual External fan1 Speed: " << (actualSpeedRPM1 == -1 ? "ERROR" : std::to_string(actualSpeedRPM1)) << " RPM" << std::endl;
+	std::cout << "  * Actual External fan2 Speed: " << (actualSpeedRPM2 == -1 ? "ERROR" : std::to_string(actualSpeedRPM2)) << " RPM" << std::endl;
 
 	NV_GPU_THERMAL_SETTINGS infos{};
 	infos.version = NV_GPU_THERMAL_SETTINGS_VER_2;
 	res |= api.getTemps(gpu, infos);
 	for (NvU32 i = 0; i < infos.count; i++) {
 		NV_THERMAL_TARGET target = infos.sensor[i].target;
-		#pragma clang diagnostic push
-		#pragma clang diagnostic ignored "-Wswitch"
 		switch (target) {
 		case NVAPI_THERMAL_TARGET_GPU:
 			std::cout << "  * GPU temp: " << infos.sensor[i].currentTemp << "C" << std::endl;
@@ -65,8 +63,9 @@ bool showGPUInfos(const NvApiClient& api, NV_PHYSICAL_GPU_HANDLE gpu) {
 			std::cout << "  * VCD Board temp: " << infos.sensor[i].currentTemp << "C" << std::endl; break;
 		case NVAPI_THERMAL_TARGET_UNKNOWN:
 			std::cout << "  * Unknown temp: " << infos.sensor[i].currentTemp << "C" << std::endl; break;
+		default:
+			break;
 		}
-		#pragma clang diagnostic pop
 	}
 	return res;
 }

@@ -25,14 +25,14 @@ The default values and what they mean are as such:
 {
     "version": 1,
     "gpu_config": {
-        "interval_s": 2,// Which interval in seconds between checks
-        "min_temp_c": 40,  // Below this, fan switches to its "minimum speed"
-        "max_temp_c": 80, // Above this, fan switches to its "maximum speed"
+        "interval_s": 2,// Which interval in seconds between checks, between 1 and 100
+        "min_temp_c": 40,  // Below this, fan switches to its "minimum speed", max 100
+        "max_temp_c": 80, // Above this, fan switches to its "maximum speed", max 100
         "min_fan_start_speed": 35, // This is the minimum speed at which the fan begins spinning, between 0 & 255
         "min_fan_stop_speed": 25, // This is the minimum speed at which the fan begins spinning, between 0 & 255
-        "min_fan_speed": 0, // Speed to set when fan is below min_temp_c. 0 means "stopped"
-        "max_fan_speed": 200, // Speed to set if temp is over max_temp_c. 255 is "max speed"
-        "average": 1, // How many last temp readings are used to average the temperature
+        "min_fan_speed": 0, // Speed to set when fan is below min_temp_c. 0 means "stopped", between 0 & 255
+        "max_fan_speed": 200, // Speed to set if temp is over max_temp_c. 255 is "max speed", between 0 & 255
+        "average": 1, // How many last temp readings are used to average the temperature, unused for now.
     }
 }
 ```
