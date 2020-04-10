@@ -182,13 +182,9 @@ void LogInfo(HANDLE event_log, const std::wstring &message) {
 
 //Returns the last Win32 error, in string format. Returns an empty string if there is no error.
 static std::wstring GetErrorAsString(DWORD error_value) {
-    DWORD errorMessageID = GetLastError();
-    if (errorMessageID == 0)
-        return std::wstring(); //No error message has been recorded
-
     LPVOID  lpMsgBuf;
     DWORD  size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpMsgBuf, 0, NULL);
+        NULL, error_value, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpMsgBuf, 0, NULL);
     if (size <=0 )
         return std::wstring();
 
@@ -330,7 +326,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
         res = api.getGPUHandles(list_gpu);
 
         int index = 0;
-        for (NV_PHYSICAL_GPU_HANDLE &gpu : list_gpu) {
+        for (NV_PHYSICAL_GPU_HANDLE gpu : list_gpu) {
             int currentTemp = api.getGPUTemperature(gpu);
             if (currentTemp == -1) {
                 LogError(event_log, L"Error calling getGPUTemperature for GPU id " + index);

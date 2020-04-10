@@ -290,22 +290,20 @@ private:
     NvAPI_I2CWriteEx_t NvAPI_I2CWriteEx = nullptr;
     NvAPI_GPU_GetThermalSettings_t NvAPI_GPU_GetThermalSettings = nullptr;
 
-    void getNvAPIError(NvAPI_Status status, std::string message);
-    bool I2CReadByteEx(const NV_PHYSICAL_GPU_HANDLE& gpu, byte deviceAddress, byte registerAddress, byte* data) const;
-    bool I2CWriteByteEx(const NV_PHYSICAL_GPU_HANDLE& gpu, byte deviceAddress, byte registerAddress, byte value) const;
-
+    bool I2CReadByteEx(NV_PHYSICAL_GPU_HANDLE gpu, byte deviceAddress, byte registerAddress, byte* data) const;
+    bool I2CWriteByteEx(NV_PHYSICAL_GPU_HANDLE gpu, byte deviceAddress, byte registerAddress, byte value) const;
 
 public:
 	NvApiClient();
 	bool getNvapiVersion(std::string& version) const;
     void getNvAPIError(NvAPI_Status status, std::string& message) const;
 	bool getGPUHandles(std::vector<NV_PHYSICAL_GPU_HANDLE>& gpuHandles) const;
-	bool getGPUFullname(const NV_PHYSICAL_GPU_HANDLE& handle, std::string& name) const;
-    int getExternalFanSpeedPercent(const NV_PHYSICAL_GPU_HANDLE& handle) const;
-    int getExternalFanSpeedRPM(const NV_PHYSICAL_GPU_HANDLE& handle, int nb) const;
-    bool setExternalFanSpeedPercent(const NV_PHYSICAL_GPU_HANDLE& handle, int percent) const;
-    bool getTemps(const NV_PHYSICAL_GPU_HANDLE& handle, NV_GPU_THERMAL_SETTINGS& infos) const;
-    int getGPUTemperature(const NV_PHYSICAL_GPU_HANDLE& handle) const;
+	bool getGPUFullname(NV_PHYSICAL_GPU_HANDLE handle, std::string& name) const;
+    int getExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE handle) const;
+    int getExternalFanSpeedRPM(NV_PHYSICAL_GPU_HANDLE handle, int nb) const;
+    bool setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE handle, int percent) const;
+    bool getTemps(NV_PHYSICAL_GPU_HANDLE handle, NV_GPU_THERMAL_SETTINGS& infos) const;
+    int getGPUTemperature(NV_PHYSICAL_GPU_HANDLE handle) const;
 
 };
 

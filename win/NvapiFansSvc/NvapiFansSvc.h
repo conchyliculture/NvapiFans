@@ -23,13 +23,3 @@ struct service_config_t {
     int version = NVAPIFANSSVC_VER;
     gpu_config_t gpu_config;
 };
-
-VOID WINAPI ServiceMain(DWORD argc, LPTSTR* argv);
-VOID WINAPI ServiceCtrlHandler(DWORD);
-DWORD WINAPI ServiceWorkerThread(LPVOID lpParam);
-
-VOID WINAPI ServiceMain(DWORD argc, LPTSTR* argv);
-
-VOID WINAPI ServiceCtrlHandler(DWORD CtrlCode);
-
-DWORD WINAPI ServiceWorkerThread(LPVOID lpParam);
