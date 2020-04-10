@@ -308,5 +308,6 @@ public:
     bool setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE handle, int percent) const;
     bool getTemps(NV_PHYSICAL_GPU_HANDLE handle, NV_GPU_THERMAL_SETTINGS& infos) const;
     int getGPUTemperature(NV_PHYSICAL_GPU_HANDLE handle) const;
+    bool detectI2CDevice(NV_PHYSICAL_GPU_HANDLE handle) const;
 };
 
