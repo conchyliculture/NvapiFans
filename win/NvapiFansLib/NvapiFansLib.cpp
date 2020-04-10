@@ -1,5 +1,4 @@
 // NvapiFansLib.cpp : Defines the functions for the static library.
-//
 
 #include "pch.h"
 #include "framework.h"
@@ -10,10 +9,10 @@
 #include "NvapiFansLib.h"
 
 
-static int hexToPercent(byte hex) {
+static int hexToPercent(int hex) {
 	return (int)floor((hex * 100.0) / 0xFF);
 };
-static int percentToHex(byte hex) {
+static int percentToHex(int hex) {
 	int hex_val = (int)hex;
 	return (int)ceil((hex_val * 0xFF) / 100.0);
 };
@@ -48,7 +47,6 @@ NvApiClient::NvApiClient() {
 			NvAPI_I2CWriteEx = (NvAPI_I2CWriteEx_t)(*NvAPI_QueryInterface)(0x283AC65A);
 			NvAPI_GPU_GetThermalSettings = (NvAPI_GPU_GetThermalSettings_t)(*NvAPI_QueryInterface)(0xE3640A56);
 			NvAPI_GPU_GetDynamicPstatesInfoEx = (NvAPI_GPU_GetDynamicPstatesInfoEx_t)(*NvAPI_QueryInterface)(0x60DED2ED);
-
 			NvAPI_Status res = NvAPI_Initialize();
 			success = (res == NVAPI_OK);
 		}

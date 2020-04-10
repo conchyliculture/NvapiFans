@@ -50,6 +50,8 @@ bool showGPUInfos(const NvApiClient& api, NV_PHYSICAL_GPU_HANDLE gpu) {
 	res |= api.getTemps(gpu, infos);
 	for (NvU32 i = 0; i < infos.count; i++) {
 		NV_THERMAL_TARGET target = infos.sensor[i].target;
+		#pragma clang diagnostic push
+		#pragma clang diagnostic ignored "-Wswitch"
 		switch (target) {
 		case NVAPI_THERMAL_TARGET_GPU:
 			std::cout << "  * GPU temp: " << infos.sensor[i].currentTemp << "C" << std::endl;
@@ -64,6 +66,7 @@ bool showGPUInfos(const NvApiClient& api, NV_PHYSICAL_GPU_HANDLE gpu) {
 		case NVAPI_THERMAL_TARGET_UNKNOWN:
 			std::cout << "  * Unknown temp: " << infos.sensor[i].currentTemp << "C" << std::endl; break;
 		}
+		#pragma clang diagnostic pop
 	}
 	return res;
 }
@@ -102,9 +105,9 @@ bool showAllGPUsInfos(const NvApiClient& api, int gpuId) {
 }
 
 bool setExternalFanSpeed(const NvApiClient& api, int gpuId, int percent) {
-	bool res;
+	bool res = true;
 
-	if (percent < 0 || percent >100) {
+	if ((percent < 0) || (percent > 100)) {
 		std::cerr << "Fan speed needs to be between 0 and 100" << std::endl;
 		return false;
 	}

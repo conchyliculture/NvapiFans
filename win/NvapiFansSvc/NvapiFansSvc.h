@@ -7,6 +7,7 @@
 
 #define NVAPIFANSSVC_VER 1
 
+// These were copied from https://github.com/Distrotech/lm_sensors/blob/master/prog/pwm/fancontrol
 struct gpu_config_t {
     int interval_s = 2; // Which interval in seconds between checks
     int min_temp_c = 40;  // Below this, fan switches to its "minimum speed"

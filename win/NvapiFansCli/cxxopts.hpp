@@ -22,6 +22,8 @@ THE SOFTWARE.
 
 */
 
+#pragma warning ( disable : 26451 )
+
 #ifndef CXXOPTS_HPP_INCLUDED
 #define CXXOPTS_HPP_INCLUDED
 
