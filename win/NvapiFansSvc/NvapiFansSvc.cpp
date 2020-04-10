@@ -282,6 +282,43 @@ bool parseConfig(HANDLE event_log, const std::wstring& config_path, service_conf
         LogError(event_log, utf8_decode(errmsg));
         return false;
     }
+    std::string errmsg = "";
+    // Do some sanity check on values
+    if ((draft_config.gpu_config.interval_s < 0) || (draft_config.gpu_config.interval_s > 100) ) {
+        errmsg += "Error in config file: bad value for interval_s: " + std::to_string(draft_config.gpu_config.interval_s);
+    }
+    if ((draft_config.gpu_config.min_temp_c < 0) || (draft_config.gpu_config.min_temp_c > 100)) {
+        errmsg += "Error in config file: bad value for min_temp_c: " + std::to_string(draft_config.gpu_config.min_temp_c);
+    }
+    if ((draft_config.gpu_config.max_temp_c < 0) || (draft_config.gpu_config.max_temp_c > 100)) {
+        errmsg += "Error in config file: bad value for max_temp_c: " + std::to_string(draft_config.gpu_config.max_temp_c);
+    }
+    if ((draft_config.gpu_config.min_fan_start_speed < 0) || (draft_config.gpu_config.min_fan_start_speed > 255)) {
+        errmsg += "Error in config file: bad value for min_fan_start_speed: " + std::to_string(draft_config.gpu_config.min_fan_start_speed);
+    }
+    if ((draft_config.gpu_config.min_fan_stop_speed < 0) || (draft_config.gpu_config.min_fan_stop_speed > 255)) {
+        errmsg += "Error in config file: bad value for min_fan_stop_speed: " + std::to_string(draft_config.gpu_config.min_fan_stop_speed);
+    }
+    if ((draft_config.gpu_config.min_fan_speed < 0) || (draft_config.gpu_config.min_fan_speed > 255)) {
+        errmsg += "Error in config file: bad value for min_fan_speed: " + std::to_string(draft_config.gpu_config.min_fan_speed);
+    }
+    if ((draft_config.gpu_config.max_fan_speed < 0) || (draft_config.gpu_config.max_fan_speed > 255)) {
+        errmsg += "Error in config file: bad value for max_fan_speed: " + std::to_string(draft_config.gpu_config.max_fan_speed);
+    }
+    if ((draft_config.gpu_config.average < 1) || (draft_config.gpu_config.average > 100)) {
+        errmsg += "Error in config file: bad value for average: " + std::to_string(draft_config.gpu_config.average);
+    }
+    if (draft_config.gpu_config.min_temp_c > draft_config.gpu_config.max_temp_c) {
+        errmsg += "Error in config file: min_temp_c can't be superior to max_temp_c";
+    }
+    if (draft_config.gpu_config.min_fan_speed > draft_config.gpu_config.max_fan_speed) {
+        errmsg += "Error in config file: min_fan_speed can't be superior to max_fan_speed";
+    }
+    if (!errmsg.empty()) {
+        LogError(event_log, utf8_decode(errmsg + "custom config ignored\n"));
+        return false;
+    }
+
     service_config = draft_config;
     return true;
 }
