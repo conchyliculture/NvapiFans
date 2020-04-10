@@ -255,7 +255,7 @@ int NvApiClient::getGPUTemperature(NV_PHYSICAL_GPU_HANDLE handle) const {
 bool NvApiClient::detectI2CDevice(NV_PHYSICAL_GPU_HANDLE handle) const {
 	bool res;
 	// Asus GPUTweakII detection mechanism
-	NvU8 high ;
+	NvU8 high;
 	NvU8 low;
 	int chipId = 0;
 
