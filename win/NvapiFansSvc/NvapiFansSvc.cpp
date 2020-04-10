@@ -305,16 +305,6 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
     return true;
 }
 
-static int increaseSpeed(const int current_speed, const service_config_t &config_service) {
-    if (current_speed == 0xff) {
-        // can't go faster
-        return current_speed;
-    }
-    else if (current_speed > config_service.gpu_config.start_fan_temp_C) {
-        return current_speed + config_service.gpu_config.speed_change_increments;
-    }
-}
-
 static int getNewSpeed(const service_config_t& service_config, const int current_speed, const int current_temp, const int current_gpu_usage) {
     if (current_temp <= (service_config.gpu_config.target_temp_max_C-10)) { // some margin
         // We cool. is GPU not doing stuff?
