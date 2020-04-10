@@ -6,22 +6,20 @@
 #include "NvapiFansLib.h" /* for NVAPI_MAX_PHYSICAL_GPUS */
 
 #define NVAPIFANSSVC_VER 1
-#define NVAPIFANSVC_FANSPEED_CHANGE_INCREMENTS_DEFAULT 5
-#define NVAPIFANSSVC_TARGET_TEMP_DEFAULT 70;
-#define NVAPIFANSSVC_MIN_FANSPEED_DEFAULT 25;
-#define NVAPIFANSSVC_START_FAN_TEMP_DEFAULT 40;
 
 struct gpu_config_t {
-    int target_temp_max_C = NVAPIFANSSVC_TARGET_TEMP_DEFAULT;     // Try to keep this as the maximum temperature for GPU
-    int start_fan_temp_C = NVAPIFANSSVC_START_FAN_TEMP_DEFAULT;   // We're comfortable with letting the GPU go this hot before turning the fan on
-    int min_fanspeed_percent = NVAPIFANSSVC_MIN_FANSPEED_DEFAULT; // Minimum speed at which we hope the fan is actually rotating.
-                                                                  // Below this value, it might be that the fan is actually not moving any air
-                                                                  // ie. Noctua A12x25 min. rotation speed is 450 RPM (+/- 20%) which is 22% of 
-                                                                  // its maximum rotational speed (2000RPM). Check with your fan manufacturer.
-    int speed_change_increments = NVAPIFANSVC_FANSPEED_CHANGE_INCREMENTS_DEFAULT; // how many percent do we add or substract to the fan speed
+    int interval_s = 2; // Which interval in seconds between checks
+    int min_temp_c = 40;  // Below this, fan switches to its "minimum speed"
+    int max_temp_c = 80;// Above this, fan switches to its "maximum speed"
+    int min_fan_start_speed = 35; // This is the minimum speed at which the fan begins spinning, between 0 & 255
+    int min_fan_stop_speed = 25; // This is the minimum speed at which the fan begins spinning, between 0 & 255
+    int min_fan_speed = 0; // Speed to set when fan is below min_temp_c. 0 means "stopped"
+    int max_fan_speed = 200; // Speed to set if temp is over max_temp_c. 255 is "max speed"
+    int average = 1; // How many last temp readings are used to average the temperature
+    std::vector<int> history_temp_c; // previous temperature readings
 };
 
 struct service_config_t {
     int version = NVAPIFANSSVC_VER;
-    gpu_config_t gpu_config;
+    gpu_config_t gpu_config = {};
 };

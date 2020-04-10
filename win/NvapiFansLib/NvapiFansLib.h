@@ -326,6 +326,7 @@ public:
     int getExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE handle) const;
     int getExternalFanSpeedRPM(NV_PHYSICAL_GPU_HANDLE handle, int nb) const;
     bool setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE handle, int percent) const;
+    bool setExternalFanSpeedPWM(NV_PHYSICAL_GPU_HANDLE handle, int pwm) const;
     bool getTemps(NV_PHYSICAL_GPU_HANDLE handle, NV_GPU_THERMAL_SETTINGS& infos) const;
     int getGPUTemperature(NV_PHYSICAL_GPU_HANDLE handle) const;
     int getGPUUsage(NV_PHYSICAL_GPU_HANDLE handle) const;

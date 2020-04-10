@@ -220,6 +220,15 @@ bool NvApiClient::setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE handle, int 
 	}
 	return true;
 }
+bool NvApiClient::setExternalFanSpeedPWM(NV_PHYSICAL_GPU_HANDLE handle, int pwm) const {
+	bool res;
+
+	res = I2CWriteByteEx(handle, I2C_EXTFAN_DEVICE_ADDRESS, I2C_EXTFAN_SPEED_CMD_REGISTER, pwm);
+	if (!res) {
+		return false;
+	}
+	return true;
+}
 
 bool NvApiClient::getTemps(NV_PHYSICAL_GPU_HANDLE handle, NV_GPU_THERMAL_SETTINGS& infos) const  {
 	NvAPI_Status status;
