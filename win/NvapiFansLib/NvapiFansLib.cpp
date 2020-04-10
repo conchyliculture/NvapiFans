@@ -13,8 +13,7 @@ static int hexToPercent(int hex) {
 	return (int)floor((hex * 100.0) / 0xFF);
 };
 static int percentToHex(int hex) {
-	int hex_val = (int)hex;
-	return (int)ceil((hex_val * 0xFF) / 100.0);
+	return (int)ceil((hex * 0xFF) / 100.0);
 };
 
 NvApiClient::NvApiClient() {
