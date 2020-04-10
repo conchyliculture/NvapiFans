@@ -1,12 +1,15 @@
 // From https://www.codeproject.com/Articles/499465/Simple-Windows-Service-in-Cplusplus
 
 #include <windows.h>
-#include "NvapiFansLib.h"
+#include <codecvt>
+#include <locale>
 #include <shlobj.h> /* SHGetKnownFolderPath */ 
 #include <tchar.h> /* for _T() macro */
 #include <iostream>
 #include <filesystem>
 #include <fstream>
+#include "NvapiFansLib.h"
+#include "NvapiFansSvc.h"
 #include "json.hpp"
 
 SERVICE_STATUS        g_ServiceStatus = { 0 };
@@ -151,7 +154,7 @@ VOID WINAPI ServiceCtrlHandler(DWORD CtrlCode)
     }
 }
 
-void LogError(HANDLE event_log, std::wstring message) {
+void LogError(HANDLE event_log, const std::wstring &message) {
     const wchar_t* buffer = message.c_str();
     ReportEvent(event_log,        // event log handle
         EVENTLOG_ERROR_TYPE, // event type
@@ -164,10 +167,10 @@ void LogError(HANDLE event_log, std::wstring message) {
         NULL);               // no binary data
 }
 
-void LogSuccess(HANDLE event_log, std::wstring message) {
+void LogInfo(HANDLE event_log, const std::wstring &message) {
     const wchar_t* buffer = message.c_str();
     ReportEvent(event_log,        // event log handle
-        EVENTLOG_SUCCESS, // event type
+        EVENTLOG_INFORMATION_TYPE, // event type
         0,                   // event category
         1,                   // event identifier
         NULL,                // no security identifier
@@ -178,62 +181,115 @@ void LogSuccess(HANDLE event_log, std::wstring message) {
 }
 
 //Returns the last Win32 error, in string format. Returns an empty string if there is no error.
-std::wstring GetLastErrorAsString()
-{
-    //Get the error message, if any.
-    DWORD errorMessageID = GetLastError();
-    if (errorMessageID == 0)
-        return std::wstring(); //No error message has been recorded
+static std::wstring GetErrorAsString(DWORD error_value) {
+    LPVOID  lpMsgBuf;
+    DWORD  size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL, error_value, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpMsgBuf, 0, NULL);
+    if (size <=0 )
+        return std::wstring();
 
-    const DWORD s = 100 + 1;
-    WCHAR buffer[s];
-    size_t size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), buffer, s, NULL);
-
-    std::wstring message(buffer, size);
-
-    //Free the buffer.
-    LocalFree(buffer);
-
+    LPCWSTR lpMsgStr = (LPCWSTR)lpMsgBuf;
+    std::wstring message(lpMsgStr, lpMsgStr + size);
+    LocalFree(lpMsgBuf);
     return message;
 }
 
-bool loadConfig(HANDLE event_log, nlohmann::json& config) {
 
-    LPWSTR szPath[MAX_PATH];
+std::wstring utf8_decode(const std::string& str)
+{
+    if (str.empty()) return std::wstring();
+    int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
+    std::wstring wstrTo(size_needed, 0);
+    MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+    return wstrTo;
+}
+
+bool parseConfig(HANDLE event_log, const std::wstring& config_path, service_config_t& service_config) {
+
+    service_config_t draft_config = {};
+    try {
+        nlohmann::json j;
+        std::ifstream ifs(config_path);
+        ifs >> j;
+
+        // Parse json
+        if (!j.count("version")) {
+            LogError(event_log, L"Config " + config_path + L" doesn't contain a key 'version'");
+            return false;
+        }
+        int j_version = j["version"].get<int>();
+        if (j_version != NVAPIFANSSVC_VER) {
+            LogError(event_log, L"Config " + config_path + L" has wrong version: " + std::to_wstring(j_version) + L" != " + std::to_wstring(NVAPIFANSSVC_VER));
+            return false;
+        }
+
+        if (j.count("gpu_config")) {
+            if (j["gpu_config"].count("target_temp_max_C")) {
+                draft_config.gpu_config.target_temp_max_C = j["gpu_config"]["target_temp_max_C"].get<int>();
+            }
+            if (j["gpu_config"].count("min_fanspeed_percent")) {
+                draft_config.gpu_config.min_fanspeed_percent = j["gpu_config"]["min_fanspeed_percent"].get<int>();
+            }
+            if (j["gpu_config"].count("start_fan_temp_C")) {
+                draft_config.gpu_config.start_fan_temp_C = j["gpu_config"]["start_fan_temp_C"].get<int>();
+            }
+        }
+    }
+    catch (nlohmann::json::parse_error& e)
+    {
+        std::string errmsg = "Error parsing json:";
+        errmsg += "message: " + (std::string)(e.what()) + "\n";
+        errmsg += "exception id: " + std::to_string(e.id) + "\n";
+        errmsg += "byte position of error: " + std::to_string(e.byte) + "\n";
+       LogError(event_log, utf8_decode(errmsg));
+       return false;
+    }
+    catch (nlohmann::json::type_error& e) {
+        std::string errmsg = "Error parsing json:";
+        errmsg += "message: " + (std::string)(e.what()) + "\n";
+        errmsg += "exception id: " + std::to_string(e.id) + "\n";
+        LogError(event_log, utf8_decode(errmsg));
+        return false;
+    }
+    service_config = draft_config;
+    return true;
+}
+
+bool loadConfig(HANDLE event_log, service_config_t &service_config) {
+
+    LPWSTR szPath;
+
     // Get path for each computer, non-user specific and non-roaming data.
-    if (SHGetKnownFolderPath(FOLDERID_ProgramData, NULL, 0, szPath) >= 0) {
+    if (SHGetKnownFolderPath(FOLDERID_ProgramData, NULL, 0, &szPath) == S_OK) {
 
-        std::wstring appdata = *szPath;
+        std::wstring appdata = szPath;
         std::filesystem::path appdata_directory = appdata;
 
         std::filesystem::path config_directory_path = appdata_directory / CONFIG_DIR_NAME;
-
+ 
         if (!std::filesystem::exists(config_directory_path)) {
             LogError(event_log, L"Can't find config file parent: " + config_directory_path.wstring() + L". Creating it");
             bool res = std::filesystem::create_directory(config_directory_path);
             if (!res) {
                 LogError(event_log, L"Could not create directory: " + config_directory_path.wstring());
+                CoTaskMemFree(szPath);
                 return false;
             }
         }
         std::filesystem::path config_path = config_directory_path / CONFIG_FILE_NAME;
 
-
         if (!std::filesystem::exists(config_path)) {
-            LogError(event_log, L"Can't find config file: " + config_path.wstring() + L". Using defaults");
-            return false;
+            LogError(event_log, L"Can't find config file: " + config_path.wstring());
+        }
+        else {
+            const std::wstring config_path_w = config_path.wstring();
+            parseConfig(event_log, config_path_w, service_config);
         }
 
-        LogSuccess(event_log, L"I found: " + config_path.wstring());
-
-        std::ifstream ifs(config_path);
-        ifs >> config;
-
+        CoTaskMemFree(szPath);
     }
     else {
-        std::wstring error_message = GetLastErrorAsString();
-        LogError(event_log, L"SHGetKnownFolderPath failed: " + error_message);
+        LogError(event_log, L"SHGetKnownFolderPath failed");
         return false;
     }
     return true;
@@ -243,15 +299,22 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 {
     NvApiClient api;
     HANDLE event_log = RegisterEventSource(NULL, L"NvapiFansSvc");
-    nlohmann::json config;
+    service_config_t service_config{};
 
-    LogSuccess(event_log, L"Worker created");
+    LogInfo(event_log, L"Worker created");
 
-    bool res = loadConfig(event_log, config);
+    bool res = loadConfig(event_log, service_config);
     if (!res) {
-        LogError(event_log, L"Could not load config");
+        LogError(event_log, L"Could not load config, using defaults");
     }
-    LogSuccess(event_log, L"Config loaded");
+
+    std::wstring message =
+        L"Using config:\n "
+        "\t- Target GPU temp: " + std::to_wstring(service_config.gpu_config.target_temp_max_C) + L"C" +
+        L"\t- Min Speed: " + std::to_wstring(service_config.gpu_config.min_fanspeed_percent) + L"%" +
+        L"\t- Start Fan: " + std::to_wstring(service_config.gpu_config.start_fan_temp_C) + L"C"
+        ;
+    LogInfo(event_log, message);
 
     //  Periodically check if the service has been requested to stop
     while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
@@ -279,6 +342,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 int _tmain(int argc, TCHAR* argv[])
 {
     TCHAR serviceName[100] = SERVICE_NAME;
+
     SERVICE_TABLE_ENTRY dispatchTable[] = {
         { serviceName, (LPSERVICE_MAIN_FUNCTION)ServiceMain },
         { NULL, NULL }
@@ -286,7 +350,11 @@ int _tmain(int argc, TCHAR* argv[])
 
     if (StartServiceCtrlDispatcher(dispatchTable) == FALSE)
     {
-        return GetLastError();
+        int err = GetLastError();
+        std::cout << err << std::endl;
+        std::wcout << GetErrorAsString(err) << std::endl;
+
+        return err;
     }
 
     return 0;

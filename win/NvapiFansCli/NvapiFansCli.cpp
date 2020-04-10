@@ -2,10 +2,27 @@
 #include <iostream>
 #include "cxxopts.hpp"
 #include "NvapiFansLib.h"
-#include "NvapiFansCli.h"
+
+
+bool validateGPUId(const std::vector<NV_PHYSICAL_GPU_HANDLE>& list_gpu, int gpuId) {
+	if (gpuId < -1 || gpuId > NVAPI_MAX_PHYSICAL_GPUS) {
+		std::cerr << "Invalid gpu id: " << gpuId;
+		return false;
+	}
+	if (list_gpu.size() == 0) {
+		std::cout << "Could not detect any NVidia GPU." << std::endl;
+		return false;
+	}
+
+	if (gpuId > 0 && gpuId >= (int)list_gpu.size()) {
+		std::cerr << "GPU id provided is " << gpuId << ". Max GPU id is " << list_gpu.size() - 1 << std::endl;
+		return false;
+	}
+	return true;
+}
 
 // Displays information for a specific gpu handle.
-bool showGPUInfos(NvApiClient api, NV_PHYSICAL_GPU_HANDLE gpu) {
+bool showGPUInfos(const NvApiClient& api, NV_PHYSICAL_GPU_HANDLE gpu) {
 	bool res;
 	std::string gpu_name;
 
@@ -49,7 +66,7 @@ bool showGPUInfos(NvApiClient api, NV_PHYSICAL_GPU_HANDLE gpu) {
 
 // Collects the list of GPU handles, and will display informations related to them.
 // If gpuId is anything >= 0, will only show info for this one.
-bool showAllGPUsInfos(NvApiClient api, int gpuId) {
+bool showAllGPUsInfos(const NvApiClient& api, int gpuId) {
 	bool res = true;
 
 	std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu;
@@ -75,24 +92,7 @@ bool showAllGPUsInfos(NvApiClient api, int gpuId) {
 	return res;
 }
 
-bool validateGPUId(std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu, int gpuId) {
-	if (gpuId < -1 || gpuId > NVAPI_MAX_PHYSICAL_GPUS) {
-		std::cerr << "Invalid gpu id: " << gpuId;
-		return false;
-	}
-	if (list_gpu.size() == 0) {
-		std::cout << "Could not detect any NVidia GPU." << std::endl;
-		return false;
-	}
-
-	if (gpuId > 0 && gpuId >= (int)list_gpu.size()) {
-		std::cerr << "GPU id provided is " << gpuId << ". Max GPU id is " << list_gpu.size() - 1 << std::endl;
-		return false;
-	}
-	return true;
-}
-
-bool setExternalFanSpeed(NvApiClient api, int gpuId, int percent) {
+bool setExternalFanSpeed(const NvApiClient& api, int gpuId, int percent) {
 	bool res;
 	std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu;
 
@@ -117,7 +117,6 @@ bool setExternalFanSpeed(NvApiClient api, int gpuId, int percent) {
 		}
 		index += 1;
 	}
-	
 
 	res &= api.setExternalFanSpeedPercent(list_gpu.at(gpuId), percent);
 	
