@@ -296,15 +296,6 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
             parseConfig(event_log, config_path_w, service_config);
         }
 
-        std::wstring message =
-            L"Applying config:\n "
-            "\t- Target GPU temp: " + std::to_wstring(service_config.gpu_config.target_temp_max_C) + L"C\n" +
-            L"\t- Min Speed: " + std::to_wstring(service_config.gpu_config.min_fanspeed_percent) + L"%\n" +
-            L"\t- Start Fan: " + std::to_wstring(service_config.gpu_config.start_fan_temp_C) + L"C\n"+
-            L"\t- Fan speed changes increments: " + std::to_wstring(service_config.gpu_config.speed_change_increments)
-            ;
-        LogInfo(event_log, message);
-
         CoTaskMemFree(szPath);
     }
     else {
@@ -363,7 +354,16 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
         //LogError(event_log, L"Could not load config, using defaults");
         FLog("Could not load config, using defaults");
     }
-    LogInfo(event_log, L"Config loaded");
+
+    std::wstring message =
+        L"Using config:\n "
+        "\t- Target GPU temp: " + std::to_wstring(service_config.gpu_config.target_temp_max_C) + L"C\n" +
+        L"\t- Min Speed: " + std::to_wstring(service_config.gpu_config.min_fanspeed_percent) + L"%\n" +
+        L"\t- Start Fan: " + std::to_wstring(service_config.gpu_config.start_fan_temp_C) + L"C\n" +
+        L"\t- Fan speed changes increments: " + std::to_wstring(service_config.gpu_config.speed_change_increments)
+        ;
+    LogInfo(event_log, message);
+
     std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu;
     res = api.getGPUHandles(list_gpu);
     if (!res) {
