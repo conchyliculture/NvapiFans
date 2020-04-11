@@ -297,6 +297,8 @@ typedef NvAPI_Status(*NvAPI_GPU_GetDynamicPstatesInfoEx_t)(NV_PHYSICAL_GPU_HANDL
 #define I2C_GPU_VRM_TEMP_REGISTER 0x15
 #define I2C_IT8915_IDENTIFIER 0x8915
 
+int hexToPercent(int hex);
+
 class NvApiClient
 {
 private:

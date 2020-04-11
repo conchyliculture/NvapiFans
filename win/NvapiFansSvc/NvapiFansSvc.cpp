@@ -180,10 +180,6 @@ void LogInfo(HANDLE event_log, const std::wstring &message) {
         NULL);               // no binary data
 }
 
-static int hexToPercent(byte hex) {
-    return (int)floor((hex * 100.0) / 0xFF);
-};
-
 //Returns the last Win32 error, in string format. Returns an empty string if there is no error.
 static std::wstring GetErrorAsString(DWORD error_value) {
     LPVOID  lpMsgBuf;
@@ -284,7 +280,7 @@ bool parseConfig(HANDLE event_log, const std::wstring& config_path, service_conf
     }
     std::string errmsg = "";
     // Do some sanity check on values
-    if ((draft_config.gpu_config.interval_s <= 1) || (draft_config.gpu_config.interval_s > 100) ) {
+    if ((draft_config.gpu_config.interval_s < 1) || (draft_config.gpu_config.interval_s > 30) ) {
         errmsg += "bad value for interval_s: " + std::to_string(draft_config.gpu_config.interval_s) + "\n";
     }
     if ((draft_config.gpu_config.min_temp_c < 0) || (draft_config.gpu_config.min_temp_c > 100)) {
@@ -399,11 +395,12 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
     res = api.getGPUHandles(list_gpu);
     if (!res) {
         LogError(event_log, L"Error calling getGPUHandles");
+        return ERROR_BAD_UNIT;
     }
 
     if (list_gpu.size() == 0) {
         LogError(event_log, L"Could not find any Nvidia GPU");
-        return ERROR; // Maybe find a better error but eh
+        return ERROR_BAD_UNIT; // Maybe find a better error but eh
     }
 
     bool detected = true;
@@ -412,13 +409,13 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
     }
     if (!detected) {
         LogError(event_log, L"Failed to detect all GPU I2C devices");
-        return ERROR_BAD_COMMAND; // Maybe find a better error but eh
+        return ERROR_BAD_UNIT; // Maybe find a better error but eh
     }
 
     //  Periodically check if the service has been requested to stop
     while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
     {
-        service_config_t config_service{};
+        service_config_t service_config{};
         bool res;
 
         for (NV_PHYSICAL_GPU_HANDLE gpu : list_gpu) {
@@ -435,8 +432,11 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 
             int new_speed = getNewSpeed(service_config, current_temp);
 
-            if ((current_speed == 0) and (new_speed < service_config.gpu_config.min_fan_start_speed)) {
-                new_speed = service_config.gpu_config.min_fan_start_speed;
+            if (
+                (current_speed == 0) // fan is not spinning
+                && (new_speed > service_config.gpu_config.min_fan_stop_speed) // And if the fan *could* be spinning
+                && (new_speed < service_config.gpu_config.min_fan_start_speed)) {
+                    new_speed = service_config.gpu_config.min_fan_start_speed;
             }
 
             pushTemp(service_config, current_temp);
@@ -446,7 +446,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
                 continue;
             }
         }
-        Sleep(config_service.gpu_config.interval_s * 1000);
+        Sleep(service_config.gpu_config.interval_s * 1000);
     }
     return ERROR_SUCCESS;
 }

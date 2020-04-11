@@ -9,9 +9,10 @@
 #include "NvapiFansLib.h"
 
 
-static int hexToPercent(int hex) {
+int hexToPercent(int hex) {
 	return (int)floor((hex * 100.0) / 0xFF);
 };
+
 static int percentToHex(int hex) {
 	return (int)ceil((hex * 0xFF) / 100.0);
 };
@@ -37,15 +38,15 @@ NvApiClient::NvApiClient() {
 		if (NvAPI_QueryInterface != nullptr) {
 			// some useful internal functions that aren't exported by nvapi.dll
 			// Values are available at https://github.com/tokkenno/nvapi.net/wiki/NvAPI-Functions
-			NvAPI_Initialize = (NvAPI_Initialize_t)(*NvAPI_QueryInterface)(0x0150E828);
-			NvAPI_EnumPhysicalGPUs = (NvAPI_EnumPhysicalGPUs_t)(*NvAPI_QueryInterface)(0xE5AC921F);
-			NvAPI_GetInterfaceVersionString = (NvAPI_GetInterfaceVersionString_t)(*NvAPI_QueryInterface)(0x01053FA5);
-			NvAPI_GPU_GetFullName = (NvAPI_GPU_GetFullName_t)(*NvAPI_QueryInterface)(0xCEEE8E9F);
-			NvAPI_GetErrorMessage = (NvAPI_GetErrorMessage_t)(*NvAPI_QueryInterface)(0x6C2D048C);
-			NvAPI_I2CReadEx = (NvAPI_I2CReadEx_t)(*NvAPI_QueryInterface)(0x4D7B0709);
-			NvAPI_I2CWriteEx = (NvAPI_I2CWriteEx_t)(*NvAPI_QueryInterface)(0x283AC65A);
-			NvAPI_GPU_GetThermalSettings = (NvAPI_GPU_GetThermalSettings_t)(*NvAPI_QueryInterface)(0xE3640A56);
-			NvAPI_GPU_GetDynamicPstatesInfoEx = (NvAPI_GPU_GetDynamicPstatesInfoEx_t)(*NvAPI_QueryInterface)(0x60DED2ED);
+			NvAPI_Initialize = (NvAPI_Initialize_t)(NvAPI_QueryInterface)(0x0150E828);
+			NvAPI_EnumPhysicalGPUs = (NvAPI_EnumPhysicalGPUs_t)(NvAPI_QueryInterface)(0xE5AC921F);
+			NvAPI_GetInterfaceVersionString = (NvAPI_GetInterfaceVersionString_t)(NvAPI_QueryInterface)(0x01053FA5);
+			NvAPI_GPU_GetFullName = (NvAPI_GPU_GetFullName_t)(NvAPI_QueryInterface)(0xCEEE8E9F);
+			NvAPI_GetErrorMessage = (NvAPI_GetErrorMessage_t)(NvAPI_QueryInterface)(0x6C2D048C);
+			NvAPI_I2CReadEx = (NvAPI_I2CReadEx_t)(NvAPI_QueryInterface)(0x4D7B0709);
+			NvAPI_I2CWriteEx = (NvAPI_I2CWriteEx_t)(NvAPI_QueryInterface)(0x283AC65A);
+			NvAPI_GPU_GetThermalSettings = (NvAPI_GPU_GetThermalSettings_t)(NvAPI_QueryInterface)(0xE3640A56);
+			NvAPI_GPU_GetDynamicPstatesInfoEx = (NvAPI_GPU_GetDynamicPstatesInfoEx_t)(NvAPI_QueryInterface)(0x60DED2ED);
 			NvAPI_Status res = NvAPI_Initialize();
 			success = (res == NVAPI_OK);
 		}

@@ -28,16 +28,12 @@ bool showGPUInfos(const NvApiClient& api, NV_PHYSICAL_GPU_HANDLE gpu) {
 
 	res = api.getGPUFullname(gpu, gpu_name);
 
-	int speedCmd = 0;
-	speedCmd = api.getExternalFanSpeedPercent(gpu);
+	int speedCmd = api.getExternalFanSpeedPercent(gpu);
 
-	int actualSpeedRPM1 = 0;
-	actualSpeedRPM1 = api.getExternalFanSpeedRPM(gpu, 1);
-	int actualSpeedRPM2 = 0;
-	actualSpeedRPM2 = api.getExternalFanSpeedRPM(gpu, 2);
+	int actualSpeedRPM1 = api.getExternalFanSpeedRPM(gpu, 1);
+	int actualSpeedRPM2 = api.getExternalFanSpeedRPM(gpu, 2);
 
-	int utilization = 0;
-	utilization = api.getGPUUsage(gpu);
+	int utilization = api.getGPUUsage(gpu);
 
 	std::cout << "- " << gpu_name << std::endl;
 	std::cout << "  * GPU Utilization: " << (utilization == -1 ? "ERROR" : std::to_string(utilization)) << "%" << std::endl;

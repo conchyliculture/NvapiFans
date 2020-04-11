@@ -9,14 +9,22 @@
 
 // These were copied from https://github.com/Distrotech/lm_sensors/blob/master/prog/pwm/fancontrol
 struct gpu_config_t {
-    int interval_s = 2;     // Which interval in seconds between checks, between 1 & 100
-    int min_temp_c = 40;    // Below this, fan switches to its "minimum speed", max 100
-    int max_temp_c = 80;    // Above this, fan switches to its "maximum speed", max 100
-    int min_fan_start_speed = 35;    // This is the minimum speed at which the fan begins spinning, between 0 & 255 aka minsa
-    int min_fan_stop_speed = 25;     // This is the minimum speed at which the fan keeps spinning once started, between 0 & 255 aka minso
-    int min_fan_speed = 0;           // Speed to set when fan is below min_temp_c. 0 means "stopped", between 0 & 255
-    int max_fan_speed = 200;         // Speed to set if temp is over max_temp_c. 255 is "max speed", between 0 & 255
-    int average = 1;                 // How many last temp readings are used to average the temperature. Not implemented yet.
+    int interval_s = 2;     // The frequency at which the service checks the GPU temperature and adjusts the fan speed.
+                            // Seconds, range 1 - 30
+    int min_temp_c = 40;    // At this temperature or lower, the service will run the fan at min_fan_speed.
+                            // Celsius, range 0 - 100
+    int max_temp_c = 80;    // At this temperature or higher, the service will run the fan at max_fan_speed.
+                            // Celsius, range 0 - 100
+    int min_fan_start_speed = 35;    // When the fan is stopped, this is the minimum speed at which the fan will start spinning.
+                                     // Range 0 - 255
+    int min_fan_stop_speed = 25;     // When the fan is already spinning, this is the lowest speed at which the fan will continue spinning.
+                                     // Range 0 - 255
+    int min_fan_speed = 0;           // The speed at which the service will run the fan when the GPU temperature is less than or equal to min_temp_c.
+                                     // Range 0 - 255. A value of 0 indicates that the fan will not spin
+    int max_fan_speed = 200;         // The speed at which the service will run the fan when the GPU temperature is greater than or equal to max_temp_c.
+                                     // Range 0 - 255.
+    int average = 1;                 // How many of the recent temperature readings are averaged to calculate the "current" temperature, used in fan speed calculations.
+                                     // Not implemented
     std::vector<int> history_temp_c; // previous temperature readings, unused for now.
 };
 
