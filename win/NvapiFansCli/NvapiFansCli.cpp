@@ -104,7 +104,6 @@ bool showAllGPUsInfos(const NvApiClient& api, int gpuId) {
 }
 
 bool setExternalFanSpeed(const NvApiClient& api, int gpuId, int percent) {
-	bool res = true;
 
 	if ((percent < 0) || (percent > 100)) {
 		std::cerr << "Fan speed needs to be between 0 and 100" << std::endl;
@@ -117,6 +116,7 @@ bool setExternalFanSpeed(const NvApiClient& api, int gpuId, int percent) {
 	}
 
 	int index = 0;
+	bool res = true;
 	for (NV_PHYSICAL_GPU_HANDLE gpu : list_gpu) {
 		if (gpuId < 0 || index == gpuId) {
 			res &= api.setExternalFanSpeedPercent(gpu, percent);
