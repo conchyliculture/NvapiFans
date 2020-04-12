@@ -1,10 +1,6 @@
 #pragma once
 
-#include <windows.h>
-#include <iostream>
 #include <filesystem>
-#include "json.hpp"
-#include "NvapiFansLib.h" /* for NVAPI_MAX_PHYSICAL_GPUS */
 
 #define NVAPIFANSSVC_VER 1
 #define NVAPIFANSSVC_LOGFILE_NAME "NvapiFansSvc.log"
@@ -15,9 +11,6 @@
 #define NVAPIFANSSVC_MIN_FANSPEED_DEFAULT 25
 #define NVAPIFANSSVC_START_FAN_TEMP_DEFAULT 40
 
-VOID WINAPI ServiceMain(DWORD argc, LPTSTR* argv);
-VOID WINAPI ServiceCtrlHandler(DWORD);
-DWORD WINAPI ServiceWorkerThread(LPVOID lpParam);
 
 // These were copied from https://github.com/Distrotech/lm_sensors/blob/master/prog/pwm/fancontrol
 struct gpu_config_t {
