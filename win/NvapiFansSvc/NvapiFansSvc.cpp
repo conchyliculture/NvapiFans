@@ -433,7 +433,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 
             if (
                 (current_speed == 0) // fan is not spinning
-                && (new_speed > service_config.gpu_config.min_fan_stop_speed) // And if the fan *could* be spinning
+                && (new_speed >= service_config.gpu_config.min_fan_stop_speed) // And if the fan *could* be spinning
                 && (new_speed < service_config.gpu_config.min_fan_start_speed)) {
                     new_speed = service_config.gpu_config.min_fan_start_speed;
             }
