@@ -384,6 +384,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 
     // From here the logfile path is hopefully set
     Logger logger(service_config.log_filepath.string());
+    logger.Info("Service Started");
 
     std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu;
     res = api.getGPUHandles(list_gpu);
@@ -438,13 +439,12 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
                 EventLogError(event_log, L"Error calling setExternalFanSpeedPercent");
                 continue;
             }
+            logger.Info("Set new speed: "+std::to_string(hexToPercent(new_speed))+"%");
         }
         logger.Flush();
-    logger.~Logger();
-
-
         Sleep(service_config.gpu_config.interval_s * 1000);
     }
+    logger.Info("Service Stopped");
     return ERROR_SUCCESS;
 }
 

@@ -10,19 +10,21 @@ private:
 	std::ofstream stream;
 	void tryOpen() {
 		if (!opened) {
-			stream.open(filename);
+			stream.open(filename, std::ofstream::out | std::ofstream::app);
 			if (stream.fail()) {
 				throw std::iostream::failure("Cannot open file for logging: " + filename);
 			}
 			opened = true;
 		}
 	}
-	std::string timestamp() {
-		time_t result = time(NULL);
-		char str[26];
-		ctime_s(str, sizeof str, &result);
-		printf("%s", str);
-		return "[" + std::string(str) + "]";
+	std::string timestamp() const {
+		struct tm timeinfo;
+		time_t t = std::time(nullptr);
+		localtime_s(&timeinfo, &t);
+
+		char mbstr[32];
+		std::strftime(mbstr, sizeof(mbstr), "[%Y-%m-%dT%H:%M:%S%z]", &timeinfo);
+		return std::string(mbstr);
 	}
 
 public:
@@ -33,6 +35,7 @@ public:
 	~Logger() {
 		if (opened)
 			stream.close();
+		opened = false;
 	};
 	void Flush() {
 		if (opened)
@@ -40,15 +43,15 @@ public:
 	};
 	void Error(std::string message) {
 		tryOpen();
-		stream << "ERROR: " + timestamp() + message << std::endl;
+		stream << timestamp() + " ERROR: " + message << std::endl;
 	};
 	void Info(std::string message) {
 		tryOpen();
-		stream << "INFO: " + timestamp() + message << std::endl;
+		stream << timestamp() + " INFO: " + message << std::endl;
 	};
 	void Debug(std::string message) {
 		tryOpen();
-		stream << "Debug: " + timestamp() + message << std::endl;
+		stream << timestamp() + " Debug: " + message << std::endl;
 	};
 };
 
