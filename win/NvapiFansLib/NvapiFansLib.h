@@ -257,6 +257,24 @@ typedef NV_I2C_INFO_V3 	NV_I2C_INFO;
 #define MAKE_NVAPI_VERSION(typeName, ver) (NvU32)(sizeof(typeName) | ((ver) << 16))
 #define NV_I2C_INFO_VER3 MAKE_NVAPI_VERSION(NV_I2C_INFO_V3, 3)
 #define NV_I2C_INFO_VER NV_I2C_INFO_VER3
+
+
+#define NVAPI_GPU_UTILIZATION_DOMAIN_GPU 0
+#define NVAPI_GPU_UTILIZATION_DOMAIN_FB  1
+#define NVAPI_GPU_UTILIZATION_DOMAIN_VID 2
+#define NVAPI_GPU_UTILIZATION_DOMAIN_BUS 3
+#define NVAPI_MAX_GPU_UTILIZATIONS 8
+typedef struct {
+    NvU32       version;        //!< Structure version
+    NvU32       flags;          //!< bit 0 indicates if the dynamic Pstate is enabled or not
+    struct {
+        NvU32   bIsPresent:1;   //!< Set if this utilization domain is present on this GPU
+        NvU32   percentage;     //!< Percentage of time where the domain is considered busy in the last 1 second interval
+    } utilization[NVAPI_MAX_GPU_UTILIZATIONS];
+} NV_GPU_DYNAMIC_PSTATES_INFO_EX;
+#define NV_GPU_DYNAMIC_PSTATES_INFO_EX_VER MAKE_NVAPI_VERSION(NV_GPU_DYNAMIC_PSTATES_INFO_EX_VER, 1)
+
+
 // function pointer types
 typedef int* (*NvAPI_QueryInterface_t)(unsigned int offset);
 typedef NvAPI_Status(*NvAPI_Initialize_t)();
@@ -267,16 +285,19 @@ typedef NvAPI_Status(*NvAPI_GetErrorMessage_t)(NvAPI_Status nr, NvAPI_ShortStrin
 typedef NvAPI_Status(*NvAPI_I2CReadEx_t)(NV_PHYSICAL_GPU_HANDLE hPhysicalGpu, NV_I2C_INFO* pI2cInfo, NvU32* unknown); // No idea what unknown is
 typedef NvAPI_Status(*NvAPI_I2CWriteEx_t)(NV_PHYSICAL_GPU_HANDLE hPhysicalGpu, NV_I2C_INFO* pI2cInfo, NvU32* unknown); // No idea what unknown is
 typedef NvAPI_Status(*NvAPI_GPU_GetThermalSettings_t)(NV_PHYSICAL_GPU_HANDLE hPhysicalGpu, NvU32 sensorIndex, NV_GPU_THERMAL_SETTINGS* pThermalSettings);
+typedef NvAPI_Status(*NvAPI_GPU_GetDynamicPstatesInfoEx_t)(NV_PHYSICAL_GPU_HANDLE hPhysicalGpu, NV_GPU_DYNAMIC_PSTATES_INFO_EX* pDynamicPstatesInfoEx);
 
+// these were found on a Asus ROG Strix RTX 2070 SUPER
 #define I2C_EXTFAN_DEVICE_ADDRESS 0x2a
+#define I2C_DEVICE_IDENTIFIER_LOW_REGISTER 0x20
+#define I2C_DEVICE_IDENTIFIER_HIGH_REGISTER 0x21
 #define I2C_EXTFAN_SPEED_CMD_REGISTER 0x41
 #define I2C_EXTFAN1_SPEED_RPM_REGISTER 0x44
 #define I2C_EXTFAN2_SPEED_RPM_REGISTER 0x48
 #define I2C_GPU_VRM_TEMP_REGISTER 0x15
-#define I2C_DEVICE_IDENTIFIER_LOW_REGISTER 0x20
-#define I2C_DEVICE_IDENTIFIER_HIGH_REGISTER 0x21
 #define I2C_IT8915_IDENTIFIER 0x8915
 
+int hexToPercent(int hex);
 
 class NvApiClient
 {
@@ -293,21 +314,23 @@ private:
     NvAPI_I2CReadEx_t NvAPI_I2CReadEx = nullptr;
     NvAPI_I2CWriteEx_t NvAPI_I2CWriteEx = nullptr;
     NvAPI_GPU_GetThermalSettings_t NvAPI_GPU_GetThermalSettings = nullptr;
-
-    bool I2CReadByteEx(NV_PHYSICAL_GPU_HANDLE gpu, byte deviceAddress, byte registerAddress, byte* data) const;
-    bool I2CWriteByteEx(NV_PHYSICAL_GPU_HANDLE gpu, byte deviceAddress, byte registerAddress, byte value) const;
+    NvAPI_GPU_GetDynamicPstatesInfoEx_t NvAPI_GPU_GetDynamicPstatesInfoEx = nullptr;
 
 public:
-	NvApiClient();
-	bool getNvapiVersion(std::string& version) const;
-    void getNvAPIError(NvAPI_Status status, std::string& message) const;
+    NvApiClient();
+    bool I2CReadByteEx(NV_PHYSICAL_GPU_HANDLE gpu, byte deviceAddress, byte registerAddress, byte* data) const;
+    bool I2CWriteByteEx(NV_PHYSICAL_GPU_HANDLE gpu, byte deviceAddress, byte registerAddress, byte value) const;
+    std::string getNvAPIError(NvAPI_Status status) const;
+    bool getNvapiVersion(std::string& version) const;
 	bool getGPUHandles(std::vector<NV_PHYSICAL_GPU_HANDLE>& gpuHandles) const;
 	bool getGPUFullname(NV_PHYSICAL_GPU_HANDLE handle, std::string& name) const;
     int getExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE handle) const;
     int getExternalFanSpeedRPM(NV_PHYSICAL_GPU_HANDLE handle, int nb) const;
     bool setExternalFanSpeedPercent(NV_PHYSICAL_GPU_HANDLE handle, int percent) const;
+    bool setExternalFanSpeedPWM(NV_PHYSICAL_GPU_HANDLE handle, int pwm) const;
     bool getTemps(NV_PHYSICAL_GPU_HANDLE handle, NV_GPU_THERMAL_SETTINGS& infos) const;
     int getGPUTemperature(NV_PHYSICAL_GPU_HANDLE handle) const;
+    int getGPUUsage(NV_PHYSICAL_GPU_HANDLE handle) const;
     bool detectI2CDevice(NV_PHYSICAL_GPU_HANDLE handle) const;
 };
 

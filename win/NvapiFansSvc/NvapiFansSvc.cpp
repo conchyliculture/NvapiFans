@@ -3,7 +3,7 @@
 #include <windows.h>
 #include <codecvt>
 #include <locale>
-#include <shlobj.h> /* SHGetKnownFolderPath */ 
+#include <shlobj.h> /* SHGetKnownFolderPath */
 #include <tchar.h> /* for _T() macro */
 #include <iostream>
 #include <filesystem>
@@ -20,7 +20,7 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR* argv);
 VOID WINAPI ServiceCtrlHandler(DWORD);
 DWORD WINAPI ServiceWorkerThread(LPVOID lpParam);
 
-#define SERVICE_NAME _T("NvapiFans Service")  
+#define SERVICE_NAME _T("NvapiFans Service")
 #define CONFIG_DIR_NAME L"NvapiFansSvc"
 #define CONFIG_FILE_NAME L"config.json"
 
@@ -194,7 +194,6 @@ static std::wstring GetErrorAsString(DWORD error_value) {
     return message;
 }
 
-
 std::wstring utf8_decode(const std::string& str)
 {
     if (str.empty()) return std::wstring();
@@ -202,6 +201,19 @@ std::wstring utf8_decode(const std::string& str)
     std::wstring wstrTo(size_needed, 0);
     MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
     return wstrTo;
+}
+
+static void pushTemp(service_config_t& service_config, int temp) {
+    int max_history_size = service_config.gpu_config.average;
+    if (service_config.gpu_config.history_temp_c.size() < max_history_size) {
+        service_config.gpu_config.history_temp_c.insert(service_config.gpu_config.history_temp_c.begin(), temp);
+    }
+    else {
+        for (int i = max_history_size - 1; i >= 1; i--) {
+            service_config.gpu_config.history_temp_c.at(i) = service_config.gpu_config.history_temp_c.at(i - 1);
+        }
+        service_config.gpu_config.history_temp_c.at(0) = temp;
+    }
 }
 
 bool parseConfig(HANDLE event_log, const std::wstring& config_path, service_config_t& service_config) {
@@ -224,14 +236,29 @@ bool parseConfig(HANDLE event_log, const std::wstring& config_path, service_conf
         }
 
         if (j.count("gpu_config")) {
-            if (j["gpu_config"].count("target_temp_max_C")) {
-                draft_config.gpu_config.target_temp_max_C = j["gpu_config"]["target_temp_max_C"].get<int>();
+            if (j["gpu_config"].count("interval_s")) {
+                draft_config.gpu_config.interval_s = j["gpu_config"]["interval_s"].get<int>();
             }
-            if (j["gpu_config"].count("min_fanspeed_percent")) {
-                draft_config.gpu_config.min_fanspeed_percent = j["gpu_config"]["min_fanspeed_percent"].get<int>();
+            if (j["gpu_config"].count("min_temp_c")) {
+                draft_config.gpu_config.min_temp_c = j["gpu_config"]["min_temp_c"].get<int>();
             }
-            if (j["gpu_config"].count("start_fan_temp_C")) {
-                draft_config.gpu_config.start_fan_temp_C = j["gpu_config"]["start_fan_temp_C"].get<int>();
+            if (j["gpu_config"].count("max_temp_c")) {
+                draft_config.gpu_config.max_temp_c = j["gpu_config"]["max_temp_c"].get<int>();
+            }
+            if (j["gpu_config"].count("min_fan_start_speed")) {
+                draft_config.gpu_config.min_fan_start_speed = j["gpu_config"]["min_fan_start_speed"].get<int>();
+            }
+            if (j["gpu_config"].count("min_fan_stop_speed")) {
+                draft_config.gpu_config.min_fan_stop_speed = j["gpu_config"]["min_fan_stop_speed"].get<int>();
+            }
+            if (j["gpu_config"].count("min_fan_speed")) {
+                draft_config.gpu_config.min_fan_speed = j["gpu_config"]["min_fan_speed"].get<int>();
+            }
+            if (j["gpu_config"].count("max_fan_speed")) {
+                draft_config.gpu_config.max_fan_speed = j["gpu_config"]["max_fan_speed"].get<int>();
+            }
+            if (j["gpu_config"].count("average")) {
+                draft_config.gpu_config.average = j["gpu_config"]["average"].get<int>();
             }
         }
     }
@@ -241,8 +268,8 @@ bool parseConfig(HANDLE event_log, const std::wstring& config_path, service_conf
         errmsg += "message: " + (std::string)(e.what()) + "\n";
         errmsg += "exception id: " + std::to_string(e.id) + "\n";
         errmsg += "byte position of error: " + std::to_string(e.byte) + "\n";
-       LogError(event_log, utf8_decode(errmsg));
-       return false;
+        LogError(event_log, utf8_decode(errmsg));
+        return false;
     }
     catch (nlohmann::json::type_error& e) {
         std::string errmsg = "Error parsing json:";
@@ -251,6 +278,46 @@ bool parseConfig(HANDLE event_log, const std::wstring& config_path, service_conf
         LogError(event_log, utf8_decode(errmsg));
         return false;
     }
+    std::string errmsg = "";
+    // Do some sanity check on values
+    if ((draft_config.gpu_config.interval_s < 1) || (draft_config.gpu_config.interval_s > 30) ) {
+        errmsg += "bad value for interval_s: " + std::to_string(draft_config.gpu_config.interval_s) + "\n";
+    }
+    if ((draft_config.gpu_config.min_temp_c < 0) || (draft_config.gpu_config.min_temp_c > 100)) {
+        errmsg += "bad value for min_temp_c: " + std::to_string(draft_config.gpu_config.min_temp_c) + "\n";
+    }
+    if ((draft_config.gpu_config.max_temp_c < 0) || (draft_config.gpu_config.max_temp_c > 100)) {
+        errmsg += "bad value for max_temp_c: " + std::to_string(draft_config.gpu_config.max_temp_c) + "\n";
+    }
+    if ((draft_config.gpu_config.min_fan_start_speed < 0) || (draft_config.gpu_config.min_fan_start_speed > 255)) {
+        errmsg += "bad value for min_fan_start_speed: " + std::to_string(draft_config.gpu_config.min_fan_start_speed) + "\n";
+    }
+    if ((draft_config.gpu_config.min_fan_stop_speed < 0) || (draft_config.gpu_config.min_fan_stop_speed > 255)) {
+        errmsg += "bad value for min_fan_stop_speed: " + std::to_string(draft_config.gpu_config.min_fan_stop_speed) + "\n";
+    }
+    if ((draft_config.gpu_config.min_fan_speed < 0) || (draft_config.gpu_config.min_fan_speed > 255)) {
+        errmsg += "bad value for min_fan_speed: " + std::to_string(draft_config.gpu_config.min_fan_speed) + "\n";
+    }
+    if ((draft_config.gpu_config.max_fan_speed < 0) || (draft_config.gpu_config.max_fan_speed > 255)) {
+        errmsg += "bad value for max_fan_speed: " + std::to_string(draft_config.gpu_config.max_fan_speed) + "\n";
+    }
+    if ((draft_config.gpu_config.average < 1) || (draft_config.gpu_config.average > 100)) {
+        errmsg += "bad value for average: " + std::to_string(draft_config.gpu_config.average) + "\n";
+    }
+    if (draft_config.gpu_config.min_temp_c > draft_config.gpu_config.max_temp_c) {
+        errmsg += "min_temp_c can't be superior to max_temp_c\n";
+    }
+    if (draft_config.gpu_config.min_fan_speed > draft_config.gpu_config.max_fan_speed) {
+        errmsg += "min_fan_speed can't be superior to max_fan_speed\n";
+    }
+    if ((draft_config.gpu_config.min_fan_stop_speed < draft_config.gpu_config.min_fan_speed) || (draft_config.gpu_config.min_fan_stop_speed > draft_config.gpu_config.max_fan_speed)) {
+        errmsg += "min_fan_stop_speed should be between min_fan_speed and max_fan_speed\n";
+    }
+    if (!errmsg.empty()) {
+        LogError(event_log, utf8_decode("Error in config file:\n" + errmsg + "custom config ignored\n"));
+        return false;
+    }
+
     service_config = draft_config;
     return true;
 }
@@ -266,7 +333,7 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
         std::filesystem::path appdata_directory = appdata;
 
         std::filesystem::path config_directory_path = appdata_directory / CONFIG_DIR_NAME;
- 
+
         if (!std::filesystem::exists(config_directory_path)) {
             LogError(event_log, L"Can't find config file parent: " + config_directory_path.wstring() + L". Creating it");
             bool res = std::filesystem::create_directory(config_directory_path);
@@ -295,6 +362,22 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
     return true;
 }
 
+// stealing from https://github.com/lm-sensors/lm-sensors/blob/master/prog/pwm/fancontrol#L623
+static int getNewSpeed(const service_config_t& service_config, const int current_temp) {
+    if (current_temp <= service_config.gpu_config.min_temp_c) {
+        // below min temp, use defined min pwm
+        return service_config.gpu_config.min_fan_speed;
+    }
+    if (current_temp >= service_config.gpu_config.max_temp_c) {
+        // over max temp, use defined max pwm
+        return service_config.gpu_config.max_fan_speed;
+    }
+
+    int temp_over_min = current_temp - service_config.gpu_config.min_temp_c;
+    float speed_to_temp_ratio = (float)(service_config.gpu_config.max_fan_speed - service_config.gpu_config.min_fan_stop_speed) / (service_config.gpu_config.max_temp_c - service_config.gpu_config.min_temp_c);
+    return (int)(temp_over_min * speed_to_temp_ratio) + service_config.gpu_config.min_fan_stop_speed;
+}
+
 DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 {
     NvApiClient api;
@@ -308,43 +391,62 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
         LogError(event_log, L"Could not load config, using defaults");
     }
 
-    std::wstring message =
-        L"Using config:\n "
-        "\t- Target GPU temp: " + std::to_wstring(service_config.gpu_config.target_temp_max_C) + L"C" +
-        L"\t- Min Speed: " + std::to_wstring(service_config.gpu_config.min_fanspeed_percent) + L"%" +
-        L"\t- Start Fan: " + std::to_wstring(service_config.gpu_config.start_fan_temp_C) + L"C"
-        ;
-    LogInfo(event_log, message);
-
     std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu;
+    res = api.getGPUHandles(list_gpu);
+    if (!res) {
+        LogError(event_log, L"Error calling getGPUHandles");
+        return ERROR_BAD_UNIT;
+    }
+
+    if (list_gpu.size() == 0) {
+        LogError(event_log, L"Could not find any Nvidia GPU");
+        return ERROR_BAD_UNIT; // Maybe find a better error but eh
+    }
+
     bool detected = true;
     for (NV_PHYSICAL_GPU_HANDLE gpu : list_gpu) {
         detected &= api.detectI2CDevice(gpu);
     }
     if (!detected) {
         LogError(event_log, L"Failed to detect all GPU I2C devices");
-        return ERROR_BAD_COMMAND; // Maybe find a better error but eh
+        return ERROR_BAD_UNIT; // Maybe find a better error but eh
     }
 
     //  Periodically check if the service has been requested to stop
     while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
     {
-        
         bool res;
-        std::string gpuName;
-        res = api.getGPUHandles(list_gpu);
 
-        int index = 0;
         for (NV_PHYSICAL_GPU_HANDLE gpu : list_gpu) {
-            int currentTemp = api.getGPUTemperature(gpu);
-            if (currentTemp == -1) {
-                LogError(event_log, L"Error calling getGPUTemperature for GPU id " + index);
+            int current_temp = api.getGPUTemperature(gpu);
+            if (current_temp == -1) {
+                LogError(event_log, L"Error calling getGPUTemperature for GPU ");
+                continue;
             }
-            index += 1;
-        }
-        Sleep(1000);
-    }
+            int current_speed = api.getExternalFanSpeedPercent(gpu);
+            if (current_speed == -1) {
+                LogError(event_log, L"Error calling getGPUTemperature for GPU ");
+                continue;
+            }
 
+            int new_speed = getNewSpeed(service_config, current_temp);
+
+            if (
+                (current_speed == 0) // fan is not spinning
+                && (new_speed >= service_config.gpu_config.min_fan_stop_speed) // And if the fan *could* be spinning
+                && (new_speed < service_config.gpu_config.min_fan_start_speed)) {
+                    new_speed = service_config.gpu_config.min_fan_start_speed;
+            }
+
+            pushTemp(service_config, current_temp);
+            res = api.setExternalFanSpeedPWM(gpu, new_speed);
+            if (!res) {
+                LogError(event_log, L"Error calling setExternalFanSpeedPercent");
+                continue;
+            }
+        }
+        Sleep(service_config.gpu_config.interval_s * 1000);
+    }
     return ERROR_SUCCESS;
 }
 
