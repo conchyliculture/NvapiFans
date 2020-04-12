@@ -415,7 +415,6 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
     //  Periodically check if the service has been requested to stop
     while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
     {
-        service_config_t service_config{};
         bool res;
 
         for (NV_PHYSICAL_GPU_HANDLE gpu : list_gpu) {

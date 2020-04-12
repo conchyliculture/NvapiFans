@@ -23,10 +23,9 @@ bool validateGPUId(const std::vector<NV_PHYSICAL_GPU_HANDLE>& list_gpu, int gpuI
 
 // Displays information for a specific gpu handle.
 bool showGPUInfos(const NvApiClient& api, NV_PHYSICAL_GPU_HANDLE gpu) {
-	bool res;
 	std::string gpu_name;
 
-	res = api.getGPUFullname(gpu, gpu_name);
+	bool res = api.getGPUFullname(gpu, gpu_name);
 
 	int speedCmd = api.getExternalFanSpeedPercent(gpu);
 
@@ -43,7 +42,7 @@ bool showGPUInfos(const NvApiClient& api, NV_PHYSICAL_GPU_HANDLE gpu) {
 
 	NV_GPU_THERMAL_SETTINGS infos{};
 	infos.version = NV_GPU_THERMAL_SETTINGS_VER_2;
-	res |= api.getTemps(gpu, infos);
+	res &= api.getTemps(gpu, infos);
 	for (NvU32 i = 0; i < infos.count; i++) {
 		NV_THERMAL_TARGET target = infos.sensor[i].target;
 		switch (target) {
