@@ -3,13 +3,12 @@
 #include <windows.h>
 #include <iostream>
 #include <filesystem>
-#include <tchar.h> /* for _T() macro */
 #include "json.hpp"
 #include "NvapiFansLib.h" /* for NVAPI_MAX_PHYSICAL_GPUS */
 
 #define NVAPIFANSSVC_VER 1
 #define NVAPIFANSSVC_LOGFILE_NAME "NvapiFansSvc.log"
-#define NVAPIFANSSVC_SVC_NAME _T("NvapiFans Service")
+#define NVAPIFANSSVC_SVC_NAME "NvapiFans Service"
 #define NVAPIFANSSVC_CONFIG_DIR_NAME "NvapiFansSvc"
 #define NVAPIFANSSVC_CONFIG_FILE_NAME "config.json"
 #define NVAPIFANSSVC_TARGET_TEMP_DEFAULT 70

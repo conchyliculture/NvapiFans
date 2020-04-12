@@ -4,6 +4,7 @@
 #include <codecvt>
 #include <locale>
 #include <shlobj.h> /* SHGetKnownFolderPath */
+#include <tchar.h> /* for _T() macro */
 #include <iostream>
 #include <filesystem>
 #include <fstream>
@@ -21,7 +22,7 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR* argv)
     DWORD Status = E_FAIL;
 
     // Register our service control handler with the SCM
-    g_StatusHandle = RegisterServiceCtrlHandler(NVAPIFANSSVC_SVC_NAME, ServiceCtrlHandler);
+    g_StatusHandle = RegisterServiceCtrlHandler(_T(NVAPIFANSSVC_SVC_NAME), ServiceCtrlHandler);
 
     if (g_StatusHandle == NULL)
     {
@@ -371,7 +372,7 @@ static int getNewSpeed(const service_config_t& service_config, const int current
 DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 {
     NvApiClient api;
-    HANDLE event_log = RegisterEventSource(NULL, NVAPIFANSSVC_SVC_NAME);
+    HANDLE event_log = RegisterEventSource(NULL, _T(NVAPIFANSSVC_SVC_NAME));
     service_config_t service_config{};
 
     EventLogInfo(event_log, L"NvapiFansSvc is starting");
@@ -449,7 +450,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 
 int _tmain(int argc, TCHAR* argv[])
 {
-    TCHAR serviceName[100] = NVAPIFANSSVC_SVC_NAME;
+    TCHAR serviceName[100] = _T(NVAPIFANSSVC_SVC_NAME);
 
     SERVICE_TABLE_ENTRY dispatchTable[] = {
         { serviceName, (LPSERVICE_MAIN_FUNCTION)ServiceMain },
