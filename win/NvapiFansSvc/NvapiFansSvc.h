@@ -20,17 +20,29 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR* argv);
 VOID WINAPI ServiceCtrlHandler(DWORD);
 DWORD WINAPI ServiceWorkerThread(LPVOID lpParam);
 
+// These were copied from https://github.com/Distrotech/lm_sensors/blob/master/prog/pwm/fancontrol
 struct gpu_config_t {
-    int target_temp_max_C = NVAPIFANSSVC_TARGET_TEMP_DEFAULT;     // Try to keep this as the maximum temperature for GPU
-    int start_fan_temp_C = NVAPIFANSSVC_START_FAN_TEMP_DEFAULT;   // We're comfortable with letting the GPU go this hot before turning the fan on
-    int min_fanspeed_percent = NVAPIFANSSVC_MIN_FANSPEED_DEFAULT; // Minimum speed at which we hope the fan is actually rotating.
-                                                                  // Below this value, it might be that the fan is actually not moving any air
-                                                                  // ie. Noctua A12x25 min. rotation speed is 450 RPM (+/- 20%) which is 22% of
-                                                                  // its maximum rotational speed (2000RPM). Check with your fan manufacturer.
+    int interval_s = 2;     // The frequency at which the service checks the GPU temperature and adjusts the fan speed.
+                            // Seconds, range 1 - 30
+    int min_temp_c = 40;    // At this temperature or lower, the service will run the fan at min_fan_speed.
+                            // Celsius, range 0 - 100
+    int max_temp_c = 80;    // At this temperature or higher, the service will run the fan at max_fan_speed.
+                            // Celsius, range 0 - 100
+    int min_fan_start_speed = 35;    // When the fan is stopped, this is the minimum speed at which the fan will start spinning.
+                                     // Range 0 - 255
+    int min_fan_stop_speed = 25;     // When the fan is already spinning, this is the lowest speed at which the fan will continue spinning.
+                                     // Range 0 - 255
+    int min_fan_speed = 0;           // The speed at which the service will run the fan when the GPU temperature is less than or equal to min_temp_c.
+                                     // Range 0 - 255. A value of 0 indicates that the fan will not spin
+    int max_fan_speed = 200;         // The speed at which the service will run the fan when the GPU temperature is greater than or equal to max_temp_c.
+                                     // Range 0 - 255.
+    int average = 1;                 // How many of the recent temperature readings are averaged to calculate the "current" temperature, used in fan speed calculations.
+                                     // Not implemented
+    std::vector<int> history_temp_c; // previous temperature readings, unused for now.
 };
 
 struct service_config_t {
     int version = NVAPIFANSSVC_VER;
     std::filesystem::path log_filepath = "";
-    gpu_config_t gpu_config;
+    gpu_config_t gpu_config = {};
 };

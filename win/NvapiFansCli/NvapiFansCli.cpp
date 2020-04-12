@@ -23,27 +23,26 @@ bool validateGPUId(const std::vector<NV_PHYSICAL_GPU_HANDLE>& list_gpu, int gpuI
 
 // Displays information for a specific gpu handle.
 bool showGPUInfos(const NvApiClient& api, NV_PHYSICAL_GPU_HANDLE gpu) {
-	bool res;
 	std::string gpu_name;
 
-	res = api.getGPUFullname(gpu, gpu_name);
+	bool res = api.getGPUFullname(gpu, gpu_name);
 
-	int speedCmd = 0;
-	speedCmd = api.getExternalFanSpeedPercent(gpu);
+	int speedCmd = api.getExternalFanSpeedPercent(gpu);
 
-	int actualSpeedRPM1 = 0;
-	actualSpeedRPM1 = api.getExternalFanSpeedRPM(gpu, 1);
-	int actualSpeedRPM2 = 0;
-	actualSpeedRPM2 = api.getExternalFanSpeedRPM(gpu, 2);
+	int actualSpeedRPM1 = api.getExternalFanSpeedRPM(gpu, 1);
+	int actualSpeedRPM2 = api.getExternalFanSpeedRPM(gpu, 2);
+
+	int utilization = api.getGPUUsage(gpu);
 
 	std::cout << "- " << gpu_name << std::endl;
-	std::cout << "  * External fan speed was set at " << speedCmd << "%" << std::endl;
-	std::cout << "  * Actual External fan1 Speed: " << actualSpeedRPM1 << " RPM" << std::endl;
-	std::cout << "  * Actual External fan2 Speed: " << actualSpeedRPM2 << " RPM" << std::endl;
+	std::cout << "  * GPU Utilization: " << (utilization == -1 ? "ERROR" : std::to_string(utilization)) << "%" << std::endl;
+	std::cout << "  * External fan speed was set at " << (speedCmd == -1 ? "ERROR" : std::to_string(speedCmd)) << "%" << std::endl;
+	std::cout << "  * Actual External fan1 Speed: " << (actualSpeedRPM1 == -1 ? "ERROR" : std::to_string(actualSpeedRPM1)) << " RPM" << std::endl;
+	std::cout << "  * Actual External fan2 Speed: " << (actualSpeedRPM2 == -1 ? "ERROR" : std::to_string(actualSpeedRPM2)) << " RPM" << std::endl;
 
 	NV_GPU_THERMAL_SETTINGS infos{};
 	infos.version = NV_GPU_THERMAL_SETTINGS_VER_2;
-	res |= api.getTemps(gpu, infos);
+	res &= api.getTemps(gpu, infos);
 	for (NvU32 i = 0; i < infos.count; i++) {
 		NV_THERMAL_TARGET target = infos.sensor[i].target;
 		switch (target) {
@@ -59,6 +58,8 @@ bool showGPUInfos(const NvApiClient& api, NV_PHYSICAL_GPU_HANDLE gpu) {
 			std::cout << "  * VCD Board temp: " << infos.sensor[i].currentTemp << "C" << std::endl; break;
 		case NVAPI_THERMAL_TARGET_UNKNOWN:
 			std::cout << "  * Unknown temp: " << infos.sensor[i].currentTemp << "C" << std::endl; break;
+		default:
+			break;
 		}
 	}
 	return res;
@@ -98,9 +99,7 @@ bool showAllGPUsInfos(const NvApiClient& api, int gpuId) {
 }
 
 bool setExternalFanSpeed(const NvApiClient& api, int gpuId, int percent) {
-	bool res;
-
-	if (percent < 0 || percent >100) {
+	if ((percent < 0) || (percent > 100)) {
 		std::cerr << "Fan speed needs to be between 0 and 100" << std::endl;
 		return false;
 	}
@@ -111,6 +110,7 @@ bool setExternalFanSpeed(const NvApiClient& api, int gpuId, int percent) {
 	}
 
 	int index = 0;
+	bool res = true;
 	for (NV_PHYSICAL_GPU_HANDLE gpu : list_gpu) {
 		if (gpuId < 0 || index == gpuId) {
 			res &= api.setExternalFanSpeedPercent(gpu, percent);
