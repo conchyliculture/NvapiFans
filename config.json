@@ -1,5 +1,6 @@
 {
     "version": 1,
+    "log_level":  "quiet",
     "gpu_config": {
         "interval_s": 2,
         "min_temp_c": 40,

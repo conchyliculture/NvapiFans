@@ -229,6 +229,22 @@ bool parseConfig(HANDLE event_log, const std::wstring& config_path, service_conf
             EventLogError(event_log, L"Config " + config_path + L" has wrong version: " + std::to_wstring(j_version) + L" != " + std::to_wstring(NVAPIFANSSVC_VER));
             return false;
         }
+        if (j.count("log_level")) {
+            std::string j_log_level = j["log_level"].get<std::string>();
+            if (j_log_level == "quiet") {
+                draft_config.log_level == SillyLogger::QUIET;
+            }
+            if (j_log_level == "info") {
+                draft_config.log_level == SillyLogger::INFO;
+            }
+            if (j_log_level == "debug") {
+                draft_config.log_level == SillyLogger::DEBUG;
+            }
+            if (j_version != NVAPIFANSSVC_VER) {
+                EventLogError(event_log, L"Config " + config_path + L" has wrong version: " + std::to_wstring(j_version) + L" != " + std::to_wstring(NVAPIFANSSVC_VER));
+                return false;
+            }
+        }
 
         if (j.count("gpu_config")) {
             if (j["gpu_config"].count("interval_s")) {
@@ -357,7 +373,7 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
     return true;
 }
 
-int getNewSpeed(Logger &logger, const service_config_t& service_config, const int current_temp) {
+int getNewSpeed(SillyLogger::Logger &logger, const service_config_t& service_config, const int current_temp) {
     // stealing from https://github.com/lm-sensors/lm-sensors/blob/master/prog/pwm/fancontrol#L623
 
     if (current_temp <= service_config.gpu_config.min_temp_c) {
@@ -388,8 +404,23 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
     }
 
     // From here the logfile path is hopefully set
-    Logger logger(service_config.log_filepath.string());
+    SillyLogger::Logger logger(service_config.log_filepath.string(), service_config.log_level);
     logger.Info("Service Started");
+
+    if (service_config.log_level == SillyLogger::DEBUG) {
+        std::string config_str = "Loaded config: ";
+        config_str += "version" + std::to_string(service_config.version) + "\n";
+        config_str += "log_level" + std::to_string(service_config.log_level) + "\n";
+        config_str += "interval_s" + std::to_string(service_config.gpu_config.interval_s) + "\n";
+        config_str += "min_temp_c" + std::to_string(service_config.gpu_config.min_temp_c) + "\n";
+        config_str += "max_temp_c" + std::to_string(service_config.gpu_config.max_fan_speed) + "\n";
+        config_str += "min_fan_start_speed" + std::to_string(service_config.gpu_config.min_fan_start_speed) + "\n";
+        config_str += "min_fan_stop_speed" + std::to_string(service_config.gpu_config.min_fan_stop_speed) + "\n";
+        config_str += "min_fan_speed" + std::to_string(service_config.gpu_config.min_fan_speed) + "\n";
+        config_str += "max_fan_speed" + std::to_string(service_config.gpu_config.max_fan_speed) + "\n";
+        config_str += "average" + std::to_string(service_config.gpu_config.average) + "\n";
+        logger.Debug(config_str);
+    }
 
     std::vector<NV_PHYSICAL_GPU_HANDLE> list_gpu;
     res = api.getGPUHandles(list_gpu);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include "Logger.hpp"
 
 #define NVAPIFANSSVC_VER 1
 #define NVAPIFANSSVC_LOGFILE_NAME "NvapiFansSvc.log"
@@ -35,6 +36,7 @@ struct gpu_config_t {
 
 struct service_config_t {
     int version = NVAPIFANSSVC_VER;
+    int log_level = SillyLogger::QUIET;
     std::filesystem::path log_filepath = "";
     gpu_config_t gpu_config = {};
 };
