@@ -5,7 +5,7 @@
 
 class Logger {
 private:
-	bool opened;
+	bool opened=false;
 	std::string	filename;
 	std::ofstream stream;
 	void tryOpen() {
@@ -29,13 +29,11 @@ private:
 
 public:
 	Logger(std::string fileName) {
-		opened = false;
 		filename = fileName;
 	};
 	~Logger() {
 		if (opened)
 			stream.close();
-		opened = false;
 	};
 	void Flush() {
 		if (opened)
