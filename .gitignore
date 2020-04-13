@@ -355,3 +355,14 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+
+# linux module stuff
+*.o
+*.cmd
+*.ko
+*.mod
+*.mod.c
+*.o.d
+*.swp
+Module.symvers
+modules.order
