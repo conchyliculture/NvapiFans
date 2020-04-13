@@ -1,4 +1,5 @@
 #include <linux/module.h>
+#include <linux/kernel.h> // for KERN_INFO
 #include <linux/init.h>
 #include <linux/i2c.h>
 #include <linux/hwmon.h>
@@ -13,27 +14,27 @@ static const unsigned short normal_i2c[] = {
     ASUS_FC2_DEVICE_ADDR, I2C_CLIENT_END };
 
 static const struct i2c_device_id asus_fc2_id[] = {
-    { "it8915", 0 },
+    { "asus_fc2", 0 },
     { }
 };
 MODULE_DEVICE_TABLE(i2c, asus_fc2_id);
 
 static int asus_fc2_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
-    printk("probe\n");
+    printk(KERN_INFO "probe\n");
     return 0;
 }
 
 static struct i2c_driver asus_fc2_driver = {
     .class = I2C_CLASS_HWMON,
     .driver = {
-        .name= "asus-fc2",
+        .name= "asus_fc2",
     },
     .probe = asus_fc2_probe,
     .id_table = asus_fc2_id,
 };
-
 module_i2c_driver(asus_fc2_driver);
+
 
 MODULE_AUTHOR("Renzo <shittydriver@renzokuken.eu>");
 MODULE_DESCRIPTION("ASUS FanConnect driver");
