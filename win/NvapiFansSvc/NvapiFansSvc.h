@@ -36,7 +36,7 @@ struct gpu_config_t {
 
 struct service_config_t {
     int version = NVAPIFANSSVC_VER;
-    SillyLogger::LogLevel log_level = SillyLogger::QUIET;
+    SillyLogger::LogLevel log_level = SillyLogger::LOGLEVEL_QUIET;
     std::filesystem::path log_filepath = "";
     gpu_config_t gpu_config = {};
 };

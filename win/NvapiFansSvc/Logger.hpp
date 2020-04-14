@@ -4,20 +4,20 @@
 #include <ctime>
 
 namespace SillyLogger {
-	enum LogLevel { DEBUG, INFO, ERR, QUIET };
+	enum LogLevel { LOGLEVEL_DEBUG, LOGLEVEL_INFO, LOGLEVEL_ERROR, LOGLEVEL_QUIET };
 
 	class Logger {
 		private:
 			bool opened = false;
 			std::string	filename;
-			LogLevel level = ERR;
+			LogLevel level = LOGLEVEL_ERROR;
 			std::ofstream stream;
 			void tryOpen() {
 				if (!opened) {
 					stream.open(filename, std::ofstream::out | std::ofstream::app);
 					if (stream.fail()) {
                         // Can't open logfile, let's just never try to log anything again
-                        level = QUIET;
+                        level = LOGLEVEL_QUIET;
 					} else {
 	 					opened = true;
                     }
@@ -44,19 +44,19 @@ namespace SillyLogger {
 					stream.flush();
 			};
 			void Error(std::string message) {
-                if (level > ERROR)
+                if (level > LOGLEVEL_ERROR)
                     return;
 				tryOpen();
 				stream << timestamp() + " ERROR: " + message << std::endl;
 			};
 			void Info(std::string message) {
-				if (level > INFO)
+				if (level > LOGLEVEL_INFO)
 					return;
 				tryOpen();
 				stream << timestamp() + " INFO: " + message << std::endl;
 			};
 			void Debug(std::string message) {
-				if (level > DEBUG)
+				if (level > LOGLEVEL_DEBUG)
 					return;
 				tryOpen();
 				stream << timestamp() + " Debug: " + message << std::endl;
