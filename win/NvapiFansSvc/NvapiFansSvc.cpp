@@ -87,11 +87,14 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR* argv)
     HANDLE hThread = CreateThread(NULL, 0, ServiceWorkerThread, NULL, 0, NULL);
 
     if (hThread == nullptr) {
-        OutputDebugString(NVAPIFANSSVC_SVC_NAME _T(" ServiceMain: Couldn't CreateThread"));
+        OutputDebugString(_T(NVAPIFANSSVC_SVC_NAME) _T(" ServiceMain: Couldn't CreateThread"));
     }
 
     // Wait until our worker thread exits signaling that the service needs to stop
     WaitForSingleObject(hThread, INFINITE);
+
+    DWORD exit_code = -1;
+    GetExitCodeThread(hThread, &exit_code);
 
 
     /*
@@ -103,7 +106,7 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR* argv)
     // Tell the service controller we are stopped
     g_ServiceStatus.dwControlsAccepted = 0;
     g_ServiceStatus.dwCurrentState = SERVICE_STOPPED;
-    g_ServiceStatus.dwWin32ExitCode = 0;
+    g_ServiceStatus.dwWin32ExitCode = exit_code;
     g_ServiceStatus.dwCheckPoint = 3;
 
     if (SetServiceStatus(g_StatusHandle, &g_ServiceStatus) == FALSE)
@@ -234,15 +237,14 @@ bool parseConfig(HANDLE event_log, const std::wstring& config_path, service_conf
             if (j_log_level == "quiet") {
                 draft_config.log_level == SillyLogger::QUIET;
             }
+            if (j_log_level == "error") {
+                draft_config.log_level == SillyLogger::ERROR;
+            }
             if (j_log_level == "info") {
                 draft_config.log_level == SillyLogger::INFO;
             }
             if (j_log_level == "debug") {
                 draft_config.log_level == SillyLogger::DEBUG;
-            }
-            if (j_version != NVAPIFANSSVC_VER) {
-                EventLogError(event_log, L"Config " + config_path + L" has wrong version: " + std::to_wstring(j_version) + L" != " + std::to_wstring(NVAPIFANSSVC_VER));
-                return false;
             }
         }
 
@@ -337,39 +339,37 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
     LPWSTR szPath;
 
     // Get path for each computer, non-user specific and non-roaming data.
-    if (SHGetKnownFolderPath(FOLDERID_ProgramData, NULL, 0, &szPath) == S_OK) {
-
-        std::wstring appdata = szPath;
-        std::filesystem::path appdata_directory = appdata;
-
-        std::filesystem::path config_directory_path = appdata_directory / NVAPIFANSSVC_CONFIG_DIR_NAME;
-
-        if (!std::filesystem::exists(config_directory_path)) {
-            EventLogError(event_log, L"Can't find config file parent: " + config_directory_path.wstring() + L". Creating it");
-            bool res = std::filesystem::create_directory(config_directory_path);
-            if (!res) {
-                EventLogError(event_log, L"Could not create directory: " + config_directory_path.wstring());
-                CoTaskMemFree(szPath);
-                return false;
-            }
-        }
-        std::filesystem::path config_path = config_directory_path / NVAPIFANSSVC_CONFIG_FILE_NAME;
-
-        if (!std::filesystem::exists(config_path)) {
-            EventLogError(event_log, L"Can't find config file: " + config_path.wstring());
-        }
-        else {
-            const std::wstring config_path_w = config_path.wstring();
-            parseConfig(event_log, config_path_w, service_config);
-            service_config.log_filepath = config_directory_path / NVAPIFANSSVC_LOGFILE_NAME;
-        }
-
-        CoTaskMemFree(szPath);
-    }
-    else {
+    if (SHGetKnownFolderPath(FOLDERID_ProgramData, NULL, 0, &szPath) != S_OK) {
         EventLogError(event_log, L"SHGetKnownFolderPath failed");
         return false;
     }
+
+    std::wstring appdata = szPath;
+    CoTaskMemFree(szPath);
+
+    std::filesystem::path appdata_directory = appdata;
+
+    std::filesystem::path config_directory_path = appdata_directory / NVAPIFANSSVC_CONFIG_DIR_NAME;
+
+    if (!std::filesystem::exists(config_directory_path)) {
+        EventLogError(event_log, L"Can't find config file parent: " + config_directory_path.wstring() + L". Creating it");
+        bool res = std::filesystem::create_directory(config_directory_path);
+        if (!res) {
+            EventLogError(event_log, L"Could not create directory: " + config_directory_path.wstring());
+            return false;
+        }
+    }
+    std::filesystem::path config_path = config_directory_path / NVAPIFANSSVC_CONFIG_FILE_NAME;
+
+    if (!std::filesystem::exists(config_path)) {
+        EventLogError(event_log, L"Can't find config file: " + config_path.wstring());
+        return false;
+    }
+    // Setting default log_filepath
+    service_config.log_filepath = config_directory_path / NVAPIFANSSVC_LOGFILE_NAME;
+    const std::wstring config_path_w = config_path.wstring();
+
+    parseConfig(event_log, config_path_w, service_config);
     return true;
 }
 
@@ -442,48 +442,43 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
         logger.Error("Failed to detect all GPU I2C devices");
         return ERROR_BAD_COMMAND; // Maybe find a better error but eh
     }
-    try {
-        //  Periodically check if the service has been requested to stop
-        while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
-        {
-            bool res;
+    //  Periodically check if the service has been requested to stop
+    while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
+    {
+        bool res;
 
-            for (NV_PHYSICAL_GPU_HANDLE gpu : list_gpu) {
-                int current_temp = api.getGPUTemperature(gpu);
-                if (current_temp == -1) {
-                    logger.Error("Error calling getGPUTemperature");
-                    continue;
-                }
-                int current_speed = api.getExternalFanSpeedPercent(gpu);
-                if (current_speed == -1) {
-                    logger.Error("Error calling getGPUTemperature");
-                    continue;
-                }
-
-                int new_speed = getNewSpeed(logger, service_config, current_temp);
-
-                if (
-                    (current_speed == 0) // fan is not spinning
-                    && (new_speed >= service_config.gpu_config.min_fan_stop_speed) // And if the fan *could* be spinning
-                    && (new_speed < service_config.gpu_config.min_fan_start_speed)) {
-                    logger.Debug("Fan not spinning, but it *could* be, so setting mini_fan_start_speed");
-                    new_speed = service_config.gpu_config.min_fan_start_speed;
-                }
-
-                pushTemp(service_config, current_temp);
-                res = api.setExternalFanSpeedPWM(gpu, new_speed);
-                if (!res) {
-                    EventLogError(event_log, L"Error calling setExternalFanSpeedPercent");
-                    continue;
-                }
-                logger.Info("Set new speed: " + std::to_string(hexToPercent(new_speed)) + "%");
+        for (NV_PHYSICAL_GPU_HANDLE gpu : list_gpu) {
+            int current_temp = api.getGPUTemperature(gpu);
+            if (current_temp == -1) {
+                logger.Error("Error calling getGPUTemperature");
+                continue;
             }
-            logger.Flush();
-            Sleep(service_config.gpu_config.interval_s * 1000);
+            int current_speed = api.getExternalFanSpeedPercent(gpu);
+            if (current_speed == -1) {
+                logger.Error("Error calling getGPUTemperature");
+                continue;
+            }
+
+            int new_speed = getNewSpeed(logger, service_config, current_temp);
+
+            if (
+                (current_speed == 0) // fan is not spinning
+                && (new_speed >= service_config.gpu_config.min_fan_stop_speed) // And if the fan *could* be spinning
+                && (new_speed < service_config.gpu_config.min_fan_start_speed)) {
+                logger.Debug("Fan not spinning, but it *could* be, so setting mini_fan_start_speed");
+                new_speed = service_config.gpu_config.min_fan_start_speed;
+            }
+
+            pushTemp(service_config, current_temp);
+            res = api.setExternalFanSpeedPWM(gpu, new_speed);
+            if (!res) {
+                logger.Error(event_log, L"Error calling setExternalFanSpeedPercent");
+                continue;
+            }
+            logger.Info("Set new speed: " + std::to_string(hexToPercent(new_speed)) + "%");
         }
-    }
-    catch (std::fstream::failure e) {
-        EventLogError(event_log, utf8_decode(e.code().message()));
+        logger.Flush();
+        Sleep(service_config.gpu_config.interval_s * 1000);
     }
     logger.Info("Service Stopped");
     return ERROR_SUCCESS;
