@@ -15,7 +15,7 @@
 
 #define ASUS_FC2_ID_LOW_REG_ADDR 0x20
 #define ASUS_FC2_ID_HIGH_REG_ADDR 0x21
-#define ASUS_FC2_FAN_PWM_REG_ADDR 0x21
+#define ASUS_FC2_FAN_PWM_REG_ADDR 0x41
 
 #define ASUS_FC2_IT8915_LOW_ID 0x15
 #define ASUS_FC2_IT8915_HIGH_ID 0x89
@@ -34,16 +34,11 @@ static int get_pwm_speed(struct regmap *regmap, long *val){
     int ret;
     unsigned int regval;
 	ret = regmap_read(regmap, ASUS_FC2_FAN_PWM_REG_ADDR, &regval);
-    printk(KERN_INFO "getted");
-    printk(KERN_INFO "lol %d\n",regval);
     *val = regval;
 	return ret;
 }
 
 static int set_pwm_speed(struct regmap *regmap, long val){
-    printk(KERN_INFO "setted");
-    printk(KERN_INFO "lol %ld\n",val);
-    printk(KERN_INFO "lol %lu\n",val);
 	return regmap_write(regmap, ASUS_FC2_FAN_PWM_REG_ADDR, val);
 }
 
@@ -122,7 +117,6 @@ static int asus_fc2_probe(struct i2c_client *client, const struct i2c_device_id 
 	unsigned int regval_low;
 	unsigned int regval_high;
 	int ret;
-    printk(KERN_INFO "Probed");
 
     dev = &client->dev;
 
