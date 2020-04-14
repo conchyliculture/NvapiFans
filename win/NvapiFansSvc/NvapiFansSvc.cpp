@@ -238,7 +238,7 @@ bool parseConfig(HANDLE event_log, const std::wstring& config_path, service_conf
                 draft_config.log_level = SillyLogger::LOGLEVEL_QUIET;
             }
             if (j_log_level == "error") {
-                draft_config.log_level = SillyLogger::LOGLEVEL_ERR;
+                draft_config.log_level = SillyLogger::LOGLEVEL_ERROR;
             }
             if (j_log_level == "info") {
                 draft_config.log_level = SillyLogger::LOGLEVEL_INFO;
@@ -407,7 +407,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
     SillyLogger::Logger logger(service_config.log_filepath.string(), service_config.log_level);
     logger.Info("Service Started");
 
-    if (service_config.log_level == SillyLogger::DEBUG) {
+    if (service_config.log_level == SillyLogger::LOGLEVEL_DEBUG) {
         std::string config_str = "Loaded config: ";
         config_str += "version" + std::to_string(service_config.version) + "\n";
         config_str += "log_level" + std::to_string(service_config.log_level) + "\n";
