@@ -40,7 +40,19 @@ i2c bus: 2
 i2c bus: 7
 i2c bus: 5
 ```
+Set fan at full speed:
+```
+i2cset 2 0x2a 0x41 0xFF
+```
+Change 0xFF for a lower value for lower speeds.
 
+
+## Hard (but cleaner) way with kernel module
+
+WiP
+
+
+## Notes
 
 ```
 # i2cdump 2 0x2a
@@ -69,9 +81,4 @@ f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00    ................
 
 same with 0x68
 
-Set fan at full speed:
-```
-i2cset 2 0x2a 0x41 0xFF
-```
-Change 0xFF for a lower value for lower speeds.
 
