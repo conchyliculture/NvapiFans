@@ -4,13 +4,13 @@
 #include <ctime>
 
 namespace SillyLogger {
-	enum LogLevel { DEBUG, INFO, ERROR, QUIET };
+	enum LogLevel { DEBUG, INFO, ERR, QUIET };
 
 	class Logger {
 		private:
 			bool opened = false;
 			std::string	filename;
-			LogLevel level = ERROR;
+			LogLevel level = ERR;
 			std::ofstream stream;
 			void tryOpen() {
 				if (!opened) {

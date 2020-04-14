@@ -238,7 +238,7 @@ bool parseConfig(HANDLE event_log, const std::wstring& config_path, service_conf
                 draft_config.log_level = SillyLogger::QUIET;
             }
             if (j_log_level == "error") {
-                draft_config.log_level = SillyLogger::ERROR;
+                draft_config.log_level = SillyLogger::ERR;
             }
             if (j_log_level == "info") {
                 draft_config.log_level = SillyLogger::INFO;
@@ -455,7 +455,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
             }
             int current_speed = api.getExternalFanSpeedPercent(gpu);
             if (current_speed == -1) {
-                logger.Error("Error calling getGPUTemperature");
+                logger.Error("Error calling getExternalFanSpeedPercent");
                 continue;
             }
 
@@ -472,7 +472,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
             pushTemp(service_config, current_temp);
             res = api.setExternalFanSpeedPWM(gpu, new_speed);
             if (!res) {
-                logger.Error(event_log, L"Error calling setExternalFanSpeedPercent");
+                logger.Error("Error calling setExternalFanSpeedPWM");
                 continue;
             }
             logger.Info("Set new speed: " + std::to_string(hexToPercent(new_speed)) + "%");
