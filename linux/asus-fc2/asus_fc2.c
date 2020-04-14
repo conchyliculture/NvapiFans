@@ -15,6 +15,7 @@
 
 #define ASUS_FC2_ID_LOW_REG_ADDR 0x20
 #define ASUS_FC2_ID_HIGH_REG_ADDR 0x21
+#define ASUS_FC2_FAN_PWM_REG_ADDR 0x21
 
 #define ASUS_FC2_IT8915_LOW_ID 0x15
 #define ASUS_FC2_IT8915_HIGH_ID 0x89
@@ -29,6 +30,23 @@ static const struct i2c_device_id asus_fc2_id[] = {
 MODULE_DEVICE_TABLE(i2c, asus_fc2_id);
 
 
+static int get_pwm_speed(struct regmap *regmap, long *val){
+    int ret;
+    unsigned int regval;
+	ret = regmap_read(regmap, ASUS_FC2_FAN_PWM_REG_ADDR, &regval);
+    printk(KERN_INFO "getted");
+    printk(KERN_INFO "lol %d\n",regval);
+    *val = regval;
+	return ret;
+}
+
+static int set_pwm_speed(struct regmap *regmap, long val){
+    printk(KERN_INFO "setted");
+    printk(KERN_INFO "lol %ld\n",val);
+    printk(KERN_INFO "lol %lu\n",val);
+	return regmap_write(regmap, ASUS_FC2_FAN_PWM_REG_ADDR, val);
+}
+
 // Describe permissions for each attribute
 static umode_t asus_fc2_is_visible(const void *data, enum hwmon_sensor_types type,
 				 u32 attr, int channel)
@@ -36,11 +54,8 @@ static umode_t asus_fc2_is_visible(const void *data, enum hwmon_sensor_types typ
 	switch (type) {
 	case hwmon_pwm:
 		switch (attr) {
-		case hwmon_temp_input:
-		case hwmon_temp_fault:
-			return 0444;
-		case hwmon_temp_offset:
-			return 0644;
+		case hwmon_pwm_input:
+            return 0644;
 		}
 		break;
 	default:
@@ -49,12 +64,44 @@ static umode_t asus_fc2_is_visible(const void *data, enum hwmon_sensor_types typ
 	return 0;
 }
 
+static int asus_fc2_read(struct device *dev, enum hwmon_sensor_types type, u32 attr, int channel, long *val) {
+	struct regmap *regmap = dev_get_drvdata(dev);
+    switch (attr) {
+    case hwmon_pwm_input:
+        return get_pwm_speed(regmap, val);
+    default:
+        return -EOPNOTSUPP;
+
+    }
+}
+
+static int asus_fc2_write(struct device *dev, enum hwmon_sensor_types type, u32 attr, int channel, long val) {
+	struct regmap *regmap = dev_get_drvdata(dev);
+    switch (attr) {
+    case hwmon_pwm_input:
+        return set_pwm_speed(regmap, val);
+    default:
+        return -EOPNOTSUPP;
+
+    }
+}
+
+
 // hwmon config info
 static const struct hwmon_ops asus_fc2_ops = {
 	.is_visible = asus_fc2_is_visible,
 	.read = asus_fc2_read,
 	.write = asus_fc2_write,
 };
+
+static const struct hwmon_channel_info *asus_fc2_info[] = {
+	HWMON_CHANNEL_INFO(pwm,
+			   HWMON_PWM_INPUT),
+//	HWMON_CHANNEL_INFO(fan,
+//			   HWMON_F_INPUT)
+	NULL
+};
+
 
 static const struct hwmon_chip_info asus_fc2_chip_info = {
 	.ops = &asus_fc2_ops,
@@ -75,6 +122,7 @@ static int asus_fc2_probe(struct i2c_client *client, const struct i2c_device_id 
 	unsigned int regval_low;
 	unsigned int regval_high;
 	int ret;
+    printk(KERN_INFO "Probed");
 
     dev = &client->dev;
 
