@@ -235,16 +235,16 @@ bool parseConfig(HANDLE event_log, const std::wstring& config_path, service_conf
         if (j.count("log_level")) {
             std::string j_log_level = j["log_level"].get<std::string>();
             if (j_log_level == "quiet") {
-                draft_config.log_level == SillyLogger::QUIET;
+                draft_config.log_level = SillyLogger::QUIET;
             }
             if (j_log_level == "error") {
-                draft_config.log_level == SillyLogger::ERROR;
+                draft_config.log_level = SillyLogger::ERROR;
             }
             if (j_log_level == "info") {
-                draft_config.log_level == SillyLogger::INFO;
+                draft_config.log_level = SillyLogger::INFO;
             }
             if (j_log_level == "debug") {
-                draft_config.log_level == SillyLogger::DEBUG;
+                draft_config.log_level = SillyLogger::DEBUG;
             }
         }
 
