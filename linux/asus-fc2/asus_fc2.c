@@ -135,10 +135,10 @@ static int asus_fc2_probe(struct i2c_client *client, const struct i2c_device_id 
         return ret;
 
     if (regval_low != ASUS_FC2_IT8915_LOW_ID) {
-        return ENODEV;
+        return -ENODEV;
     }
     if (regval_high != ASUS_FC2_IT8915_HIGH_ID) {
-        return ENODEV;
+        return -ENODEV;
     }
 
 	i2c_set_clientdata(client, regmap);
@@ -151,12 +151,39 @@ static int asus_fc2_probe(struct i2c_client *client, const struct i2c_device_id 
 	return PTR_ERR_OR_ZERO(hwmon_dev);
 }
 
+/* Return 0 if detection is successful, -ENODEV otherwise */
+  static int asus_fc2_detect(struct i2c_client *new_client, struct i2c_board_info *info) {
+      struct i2c_adapter *adapter = new_client->adapter;
+      unsigned int regval_low;
+      unsigned int regval_high;
+
+      if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE_DATA)){
+            return -ENODEV;
+      }
+
+      regval_low = i2c_smbus_read_byte_data(new_client, ASUS_FC2_ID_LOW_REG_ADDR);
+      regval_high = i2c_smbus_read_byte_data(new_client, ASUS_FC2_ID_HIGH_REG_ADDR);
+
+      if (regval_low != ASUS_FC2_IT8915_LOW_ID) {
+//        printk(KERN_INFO "bad2 %d!=%d", regval_low, ASUS_FC2_IT8915_LOW_ID);
+          return -ENODEV;
+      }
+      if (regval_high != ASUS_FC2_IT8915_HIGH_ID) {
+//        printk(KERN_INFO "bad3 %d!=%d", regval_high, ASUS_FC2_IT8915_HIGH_ID);
+          return -ENODEV;
+      }
+      strlcpy(info->type, "asus_fc2", I2C_NAME_SIZE);
+      return 0;
+  }
+
 static struct i2c_driver asus_fc2_driver = {
     .class = I2C_CLASS_HWMON,
     .driver = {
         .name= "asus_fc2",
     },
     .probe = asus_fc2_probe,
+    .detect = asus_fc2_detect,
+    .address_list = normal_i2c,
     .id_table = asus_fc2_id,
 };
 module_i2c_driver(asus_fc2_driver);
