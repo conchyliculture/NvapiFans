@@ -155,6 +155,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="json.hpp" />
+    <ClInclude Include="Logger.hpp" />
     <ClInclude Include="NvapiFansSvc.h" />
   </ItemGroup>
   <ItemGroup>
