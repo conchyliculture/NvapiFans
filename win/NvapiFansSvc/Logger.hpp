@@ -20,14 +20,14 @@ namespace SillyLogger {
 	class Logger {
 		private:
 			bool opened = false;
-			std::string	filename;
+			std::string filename;
 			LogLevel level = LOGLEVEL_QUIET;
 			std::ofstream stream;
 			void tryOpen() {
-                if (filename == "") {
-                    level = LOGLEVEL_QUIET;
-                    return;
-                }
+				if (filename == "") {
+					level = LOGLEVEL_QUIET;
+					return;
+				}
 				if (!opened) {
 					stream.open(filename, std::ofstream::out | std::ofstream::app);
 					if (stream.fail()) {
@@ -40,7 +40,7 @@ namespace SillyLogger {
 			}
 
 		public:
-            // Passing an empty string as filename will turn off logging.
+			// Passing an empty string as filename will turn off logging.
 			Logger(std::string filename_, LogLevel level_) : filename{filename_}, level{level_}{};
 			~Logger() {
 				if (opened)
