@@ -73,8 +73,12 @@ And now you should have a new `hwmon` device you can use.
 ```
 And hear your fan SPIN !
 
-Unfortunately, I couldn't find a way to report the GPU
-temperature by reading on this i2c device.
+Unfortunately, I couldn't find a way to report the GPU temperature by reading on this i2c device. I actually couldn't even
+find a way to get this information from the kernel space. `nouveau` driver is doing some [weird voodoo shit](https://github.com/torvalds/linux/blob/master/drivers/gpu/drm/nouveau/nvkm/subdev/therm/gp100.c#L31)
+to access it and export on their own module.
+
+This means unfortunately, we can't use [fancontrol](https://github.com/lm-sensors/lm-sensors/blob/master/prog/pwm/fancontrol) to manage the fan speed
+to cool down our GPU....
 
 
 ### Extra hard way with autodetection
