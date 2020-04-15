@@ -1,3 +1,12 @@
+/*
+ * Simple hwmon module to control fans plugged onto Asus Fancontrol headers
+ *
+ * Some useful doc:
+ * https://www.kernel.org/doc/html/latest/i2c/index.html
+ * https://www.kernel.org/doc/html/latest/i2c/writing-clients.html
+ * https://www.kernel.org/doc/html/v5.5/driver-api/i2c.html
+ *
+ */
 #include <linux/module.h>
 #include <linux/kernel.h> // for KERN_INFO
 #include <linux/init.h>
