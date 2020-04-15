@@ -170,7 +170,7 @@ While I suppose `driver->class` here is the one define in the `i2c_driver` struc
 I basically want MORE `dev_dbg` and see what's in the `i2c_adapter` struct in `i2c_detect()`. We have multiple solutions
 
  0. Add the calls to `dev_dbg()` in `i2c-core.c`, recompile the kernel, reboot.
- 0. Use one of the recent live kernel patching methods like kpatch to change the code.
+ 0. Use one of the recent live kernel patching methods like [kpatch](https://github.com/dynup/kpatch) to change the code.
  0. Use [bpftrace](https://github.com/iovisor/bpftrace) to hook that method and display its arguments.
 
 Since I hate anything new, and change is terrible, I first tried solution 1. While the thing was compiling (it still takes, like 3 mins on my new machine! :3) I also looked at solution 2.
