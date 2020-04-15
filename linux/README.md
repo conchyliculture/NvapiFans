@@ -178,28 +178,77 @@ I couldn't make it work, and while complaining about how everything was terrible
 
 It's actually quite simple to use once you figure out what you need to do.
 
-F
-
-
-
-
-I would activate dynamic_debug for the
-
+First figure out if your function is traceable:
 
 ```
-[   90.105027] i2c-core: driver [asus_fc2] registered
-[   90.105043] i2c i2c-0: found normal entry for adapter 0, addr 0x32
-[   90.105595] i2c i2c-0: found normal entry for adapter 0, addr 0x33
-[   90.106141] i2c i2c-0: found normal entry for adapter 0, addr 0x2a
-[   90.106692] i2c i2c-1: found normal entry for adapter 1, addr 0x32
-[   90.107240] i2c i2c-1: found normal entry for adapter 1, addr 0x33
-[   90.107790] i2c i2c-1: found normal entry for adapter 1, addr 0x2a
-[   90.108344] i2c i2c-2: found normal entry for adapter 2, addr 0x32
-[   90.108610] i2c i2c-2: found normal entry for adapter 2, addr 0x33
-[   90.108808] i2c i2c-2: found normal entry for adapter 2, addr 0x2a
+# bpftrace -l | grep i2c_detect
+kprobe:i2c_detect
 ```
+
+And write the small program that will take the first arg of `i2c_detect` and log the value of `class` for it:
+
+```
+$ cat i2c.bt
+#include <linux/i2c.h>
+#include <linux/i2c-smbus.h>
+
+kprobe:i2c_detect
+{
+    $adapter = (struct i2c_adapter *)arg0;
+    $driver = (struct i2c_driver *)arg1;
+    printf("I2C adapter: %s \n", $adapter->name);
+    printf("adapter class: %d, driver class: %d\n", $adapter->class, $driver->class);
+}
+```
+
+Run `bpftrace`:
+```
+# bpftrace i2c.bt
+Attaching 1 probe...
+I2C adapter: SMBus PIIX4 adapter port 0 at 0b00
+adapter class: 129, driver class: 1
+I2C adapter: SMBus PIIX4 adapter port 2 at 0b00
+adapter class: 129, driver class: 1
+I2C adapter: NVIDIA i2c adapter 1 at 7:00.0
+adapter class: 0, driver class: 1
+I2C adapter: NVIDIA i2c adapter 3 at 7:00.0
+adapter class: 0, driver class: 1
+I2C adapter: NVIDIA i2c adapter 5 at 7:00.0
+adapter class: 0, driver class: 1
+I2C adapter: NVIDIA i2c adapter 6 at 7:00.0
+adapter class: 0, driver class: 1
+I2C adapter: NVIDIA i2c adapter 7 at 7:00.0
+adapter class: 0, driver class: 1
+I2C adapter: NVIDIA i2c adapter 8 at 7:00.0
+adapter class: 0, driver class: 1
+```
+
+Ah ha ! So our nvidia i2c adapter is not declaring anyclass, which makes the test fail in `i2c_detect`, and the adapter to be ignored.
+
+And indeed, in `/usr/src/nvidia-current-440.82/nvidia/nv-i2c.c` (installed via `nvidia-kernel-dkms` package), their `i2c_adapter` struct is instantiated without specifying the class:
+
+```
+struct i2c_adapter nv_i2c_adapter_prototype = {
+    .owner             = THIS_MODULE,
+    .algo              = &nv_i2c_algo,
+    .algo_data         = NULL,
+};
+```
+
+So you can patch it
+```
+struct i2c_adapter nv_i2c_adapter_prototype = {
+    .owner             = THIS_MODULE,
+	.class			   = I2C_CLASS_HWMON | I2C_CLASS_DDC, # Probably just need I2C_CLASS_HWMON
+    .algo              = &nv_i2c_algo,
+    .algo_data         = NULL,
+};
+```
+Rebuild your module, and voila! Magic autodetection with a simple `modprobe`
+
 
 ### i2cdump
+
 ```
 # i2cdump 2 0x2a
 No size specified (using byte-data access)
