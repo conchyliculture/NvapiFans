@@ -1,11 +1,17 @@
 #pragma once
 
-#include <windows.h>
-#include <iostream>
-#include "json.hpp"
-#include "NvapiFansLib.h" /* for NVAPI_MAX_PHYSICAL_GPUS */
+#include <filesystem>
+#include "Logger.hpp"
 
 #define NVAPIFANSSVC_VER 1
+#define NVAPIFANSSVC_LOGFILE_NAME "NvapiFansSvc.log"
+#define NVAPIFANSSVC_SVC_NAME "NvapiFans Service"
+#define NVAPIFANSSVC_CONFIG_DIR_NAME "NvapiFansSvc"
+#define NVAPIFANSSVC_CONFIG_FILE_NAME "config.json"
+#define NVAPIFANSSVC_TARGET_TEMP_DEFAULT 70
+#define NVAPIFANSSVC_MIN_FANSPEED_DEFAULT 25
+#define NVAPIFANSSVC_START_FAN_TEMP_DEFAULT 40
+
 
 // These were copied from https://github.com/Distrotech/lm_sensors/blob/master/prog/pwm/fancontrol
 struct gpu_config_t {
@@ -30,5 +36,7 @@ struct gpu_config_t {
 
 struct service_config_t {
     int version = NVAPIFANSSVC_VER;
+    SillyLogger::LogLevel log_level = SillyLogger::LOGLEVEL_ERROR;
+    std::filesystem::path log_filepath = "";
     gpu_config_t gpu_config = {};
 };
