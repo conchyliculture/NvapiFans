@@ -41,7 +41,7 @@ namespace SillyLogger {
 
 		public:
 			// Passing an empty string as filename will turn off logging.
-			Logger(std::string filename_, LogLevel level_) : filename{filename_}, level{level_}{};
+			Logger(const std::string &filename_, LogLevel level_) : filename{filename_}, level{level_}{};
 			~Logger() {
 				if (opened)
 					stream.close();
