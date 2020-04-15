@@ -247,6 +247,8 @@ struct i2c_adapter nv_i2c_adapter_prototype = {
 Rebuild your module, and voila! Magic autodetection with a simple `modprobe`
 
 
+## Misc
+
 ### i2cdump
 
 ```
