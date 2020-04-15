@@ -58,8 +58,8 @@ The default values and what they mean are as such:
 ```
 {
     "version": 1,
-    "log_level": "quiet",    // Verbosity level for the logfile.
-                             // either "quiet", "error",  "info", or "debug". Default is "error". "quiet" will not log anything. "error" will just log errors. "info" will log fan speed changes. "debug" will log debug info.
+    "log_level": "error",    // Verbosity level for the logfile.
+                             // either "quiet", "error", "info", or "debug". Default is "error". "quiet" will not log anything. "error" will just log errors. "info" will log fan speed changes. "debug" will log debug info.
     "gpu_config": {
         "interval_s": 2,     // The frequency at which the service checks the GPU temperature and adjusts the fan speed.
                             // Seconds, range 1 - 30
