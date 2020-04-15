@@ -50,19 +50,19 @@ namespace SillyLogger {
 				if (opened)
 					stream.flush();
 			};
-			void Error(const std::string message) {
+			void Error(const std::string &message) {
 				if (level > LOGLEVEL_ERROR)
 					return;
 				tryOpen();
 				stream << timestamp() + " ERROR: " + message << std::endl;
 			};
-			void Info(const std::string message) {
+			void Info(const std::string &message) {
 				if (level > LOGLEVEL_INFO)
 					return;
 				tryOpen();
 				stream << timestamp() + " INFO: " + message << std::endl;
 			};
-			void Debug(const std::string message) {
+			void Debug(const std::string &message) {
 				if (level > LOGLEVEL_DEBUG)
 					return;
 				tryOpen();
