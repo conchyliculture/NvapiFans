@@ -114,7 +114,7 @@ reboot
 And now that your `nvidia` i2c adapter is not a little bitch anymore, you can just do:
 
 ```
-cd asus_fc2
+cd asus_fc2_module
 make
 sudo make install
 
