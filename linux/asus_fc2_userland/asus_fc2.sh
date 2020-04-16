@@ -42,11 +42,11 @@ function check_requirements() {
 }
 
 function get_gpu_temperature() {
-    echo "$(nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader)"
+    nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader
 }
 
 function get_nb_gpu(){
-    echo "$(nvidia-smi -L | wc -l)"
+    nvidia-smi -L | wc -l
 }
 
 function set_pwm(){
@@ -72,11 +72,8 @@ function get_pwm(){
 }
 
 function update_temp(){
+    # Stolen from https://github.com/lm-sensors/lm-sensors/blob/master/prog/pwm/fancontrol
     tval=$(get_gpu_temperature)
-    # debug info
-
-
-
     mint=${MINTEMP}
     maxt=${MAXTEMP}
     minsa=${MINSTART}
@@ -118,10 +115,6 @@ function update_temp(){
     fi
 
     set_pwm $pwmval
-    if [ $? -ne 0 ]; then
-        echo "Error writing PWM value to $DIR/$pwmo" >&2
-        restorefans 1
-    fi
 
     if [ "$DEBUG" != "" ]; then
         echo "new pwmval=$pwmval"

@@ -28,7 +28,7 @@ apt install i2c-tools nvidia-smi
 modprobe i2c-dev
 ```
 
-Then go in `asus_fc2_userland`. [Check out](#Detect-i2c-adapter) which i2c adapter to use, for example here: "2".
+Then `cd` into `asus_fc2_userland`. [Check out](#Detect-i2c-adapter) which i2c adapter to use, for example here: "2".
 
 Set fan at full speed, to make sure everything is alright. (Change 0xFF for a lower value for lower speeds.)
 ```
@@ -91,7 +91,7 @@ For this to work we need to path the `nvidia` driver (might not be needed with `
 
 I have it installed with dkms.
 
-Patch it with the following (see Notes below as to why).
+Patch it with the following (see [Notes](#Nvidia-driver-is-a-little-bitch) below as to why).
 ```
 # diff -u /tmp/nv-i2c.c  /usr/src/nvidia-current-440.82/nvidia/nv-i2c.c
 --- /tmp/nv-i2c.c	2020-04-15 23:59:55.488972454 +0200
@@ -132,7 +132,7 @@ echo 255 > /sys/class/hwmon/hwmon2/pwm1
 You'll probably have to re-do this everytime the nvidia drivers get updated.
 
 
-## Notes
+## Nvidia driver is a little bitch
 
 I couldn't get autodetection to work, after implementing the i2c_driver->detect() function, it would actually not be called.
 
