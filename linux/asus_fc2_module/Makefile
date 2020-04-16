@@ -22,7 +22,9 @@ load:
 install:
 	install -m 0755 -o root -g root $(modname).ko /lib/modules/$(KVERSION)/kernel/drivers/hwmon/
 	depmod -a
+	echo ${modname} > /etc/modules-load.d/${modname}.conf
 
 uninstall:
+	rm /etc/modules-load.d/${modname}.conf
 	rm /lib/modules/$(KVERSION)/kernel/drivers/hwmon/$(modname).ko
 	depmod -a

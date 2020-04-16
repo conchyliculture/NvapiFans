@@ -5,7 +5,6 @@
 I2C_DEVICE="2" # See README.md for tricks on how to find this
 
 I2C_ADDRESS="0x2a" # For a ASUS ROG Strix RTX2070 SUPER
-I2C_ADDRESS="0x68" # For a ASUS ROG Strix RTX2070 SUPER
 PWM_REG_ADDDRESS="0x41" # For a ASUS ROG Strix RTX2070 SUPER 
 
 # see fancontrol.8 for information about these values:

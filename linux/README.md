@@ -1,4 +1,4 @@
-# Requirements
+# Hardware & system Requirements
 
 Tested with drivers from NVIDIA (`nvidia` module). Driver version needs to be [>=304.137](https://download.nvidia.com/XFree86/Linux-x86_64/304.137/README/i2c.html)
 for the i2c ports found on board (or on monitors connected to the board) to be exposed.
@@ -20,10 +20,11 @@ This is what `lspci -v` gives me:
 
 # Install
 
-## Easy way, with just i2c-dev
-```
-apt install i2c-tools
+## Easy way, userland with provided systemd unit
 
+First, install requirements:
+```
+apt install i2c-tools nvidia-smi
 modprobe i2c-dev
 ```
 
@@ -42,7 +43,7 @@ i2c bus: 2
 i2c bus: 7
 i2c bus: 5
 ```
-Set fan at full speed:
+Set fan at full speed, to make sure everything is alright
 ```
 i2cset 2 0x2a 0x41 0xFF
 ```

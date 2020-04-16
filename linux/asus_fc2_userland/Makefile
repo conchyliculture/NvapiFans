@@ -1,5 +1,6 @@
 
 uninstall:
+	rm /etc/modules-load.d/asus_fc2.conf
 	systemctl stop asus_fc2
 	systemctl disable asus_fc2
 	rm /usr/local/bin/asus_fc2.sh
@@ -8,6 +9,8 @@ uninstall:
 
 
 install:
+	echo "i2c-dev" > /etc/modules-load.d/${modname}.conf
+	modprobe i2c-dev
 	cp asus_fc2.sh /usr/local/bin/
 	chown root:root /usr/local/bin/asus_fc2.sh
 	chmod u+x /usr/local/bin/asus_fc2.sh

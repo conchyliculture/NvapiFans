@@ -14,7 +14,7 @@ I want to have nothing to do if you brick your expensive gear.
 ## Installation / Usage
 
 See relevant documents per platform:
-  * [Linux](linux/README.md)
+  * [Linux](linux/README.md), only tested with non-free Nvidia drivers.
   * [Windows](win/README.md)
 
 
