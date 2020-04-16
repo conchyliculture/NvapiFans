@@ -28,29 +28,32 @@ apt install i2c-tools nvidia-smi
 modprobe i2c-dev
 ```
 
-Now try to figure out which i2c device to use. We're looking for address 0x2a (which is from an ASUS ROG Strix 2070S):
+Then go in `asus_fc2_userland`. [Check out](#Detect-i2c-adapter) which i2c adapter to use, for example here: "2".
 
-```
-# for bus in $(i2cdetect -l | grep NVIDIA | cut -d$'\t' -f 1 | cut -d "-" -f 2); do echo "i2c bus: $bus"; i2cdetect -y $bus| grep -B4 " 2a "; done
-i2c bus: 3
-i2c bus: 6
-i2c bus: 4
-i2c bus: 2
-     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-00:          -- -- -- -- -- 08 -- -- -- -- -- -- --
-10: -- -- -- -- -- 15 -- -- -- -- -- -- -- -- -- --
-20: -- -- -- -- -- -- -- 27 -- -- 2a -- -- -- -- --
-i2c bus: 7
-i2c bus: 5
-```
-Set fan at full speed, to make sure everything is alright
+Set fan at full speed, to make sure everything is alright. (Change 0xFF for a lower value for lower speeds.)
 ```
 i2cset 2 0x2a 0x41 0xFF
 ```
-Change 0xFF for a lower value for lower speeds.
 
+Edit the monitoring script `asus_fc2.sh` to your make sure everything is set up properly, and install the monitoring script & systemd service:
+```
+sudo make install
+```
+
+And that's it!
+
+If you want to log every PWM value being set, edit `/etc/systemd/system/asus_fc2.service` and change:
+```
+ExecStart=/bin/bash /usr/local/bin/asus_fc2.sh -l
+```
+to
+```
+ExecStart=/bin/bash /usr/local/bin/asus_fc2.sh
+```
 
 ## Hard way with kernel module
+
+[Figure out](#Detect-i2c-adapter) your i2c device.
 
 ```
 cd asus_fc2
@@ -253,6 +256,26 @@ Rebuild your module, and voila! Magic autodetection with a simple `modprobe`
 
 
 ## Misc
+
+### Detect i2c adapter
+
+Try to figure out which i2c device to use. We're looking for address 0x2a (which is from an ASUS ROG Strix 2070S):
+
+```
+# for bus in $(i2cdetect -l | grep NVIDIA | cut -d$'\t' -f 1 | cut -d "-" -f 2); do echo "i2c bus: $bus"; i2cdetect -y $bus| grep -B4 " 2a "; done
+i2c bus: 3
+i2c bus: 6
+i2c bus: 4
+i2c bus: 2
+     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00:          -- -- -- -- -- 08 -- -- -- -- -- -- --
+10: -- -- -- -- -- 15 -- -- -- -- -- -- -- -- -- --
+20: -- -- -- -- -- -- -- 27 -- -- 2a -- -- -- -- --
+i2c bus: 7
+i2c bus: 5
+```
+
+This means the i2c bus is number 2.
 
 ### i2cdump
 
