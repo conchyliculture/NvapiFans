@@ -19,8 +19,8 @@
 #define ASUS_FC2_VERSION "0.0.20200412"
 
 #define ASUS_FC2_DEVICE_ADDR 0x2a
-#define ASUS_FC2_DEVICE_ADDR_BACKUP                                            \
-  0x68 // Is apparently exactly the same as 0x2a
+// Behaves the same as 0x2a
+#define ASUS_FC2_DEVICE_ADDR_BACKUP 0x68
 
 #define ASUS_FC2_ID_LOW_REG_ADDR 0x20
 #define ASUS_FC2_ID_HIGH_REG_ADDR 0x21
@@ -51,15 +51,8 @@ static int set_pwm_speed(struct regmap *regmap, long val) {
 static umode_t asus_fc2_is_visible(const void *data,
                                    enum hwmon_sensor_types type, u32 attr,
                                    int channel) {
-  switch (type) {
-  case hwmon_pwm:
-    switch (attr) {
-    case hwmon_pwm_input:
+  if (type == hwmon_pwm && attr == hwmon_pwm_input) {
       return 0644;
-    }
-    break;
-  default:
-    break;
   }
   return 0;
 }
@@ -118,8 +111,6 @@ static int asus_fc2_probe(struct i2c_client *client,
   unsigned int regval_low;
   unsigned int regval_high;
   int ret;
-
-  dev = &client->dev;
 
   regmap = devm_regmap_init_i2c(client, &asus_fc2_regmap_config);
   if (IS_ERR(regmap)) {
