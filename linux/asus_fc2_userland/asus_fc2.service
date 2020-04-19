@@ -1,0 +1,10 @@
+[Unit]
+Description=NvapiFans service
+After=graphical.target
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /usr/local/bin/asus_fc2.sh -l
+
+[Install]
+WantedBy=graphical.target
