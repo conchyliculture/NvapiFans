@@ -360,9 +360,7 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
         }
     }
     std::filesystem::path config_path = config_directory_path / NVAPIFANSSVC_CONFIG_FILE_NAME;
-    //
-    // Setting default log_filepath
-    service_config.log_filepath = config_directory_path / NVAPIFANSSVC_LOGFILE_NAME;
+
     const std::wstring config_path_w = config_path.wstring();
 
     if (!std::filesystem::exists(config_path)) {
@@ -371,6 +369,10 @@ bool loadConfig(HANDLE event_log, service_config_t &service_config) {
     }
 
     parseConfig(event_log, config_path_w, service_config);
+
+    // Setting default log_filepath
+    service_config.log_filepath = config_directory_path / NVAPIFANSSVC_LOGFILE_NAME;
+
     return true;
 }
 
