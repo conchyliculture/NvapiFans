@@ -18,6 +18,9 @@ static int percentToHex(int hex) {
 };
 
 NvApiClient::NvApiClient() {
+    // Remove the current directory from the search path for dynamically loaded
+    // DLLs as a precaution.
+    SetDllDirectory(L"");
 
 	#ifdef _WIN64
 		hNvapi = LoadLibrary(L"nvapi64.dll");
@@ -272,6 +275,10 @@ bool NvApiClient::detectI2CDevice(NV_PHYSICAL_GPU_HANDLE handle) const {
 	res &= I2CReadByteEx(handle, I2C_EXTFAN_DEVICE_ADDRESS, I2C_DEVICE_IDENTIFIER_LOW_REGISTER, &low);
 	if (!res) {
 		std::cerr << "Error reading bytes from I2C device during identification." << std::endl;
+		std::cerr << "This is expected if your device is not an ASUS ROG board." << std::endl;
+		std::cerr << "If your graphic card still has an extra fan header, " << std::endl;
+		std::cerr << "you can try the following processs to find the appropriate i2c addresses:" << std::endl;
+		std::cerr << "https://github.com/conchyliculture/NvapiFans/tree/master/linux#get-new-i2c-addresses" << std::endl;
 		return false;
 	}
 
