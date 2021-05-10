@@ -257,7 +257,21 @@ Rebuild your module, and voila! Magic autodetection with a simple `modprobe`
 
 ## Misc
 
-### Detect i2c adapter
+### Get new i2c addresses
+
+This can be done in a Ubuntu LiveCD. Remember to have `i2c-dev` module running:
+
+```
+apt install i2c-tools
+modprobe i2c-dev
+```
+
+Then provide the output of:
+```
+# for bus in $(i2cdetect -l | grep NVIDIA | cut -d$'\t' -f 1 | cut -d "-" -f 2); do echo "i2c bus: $bus"; i2cdetect -y $bus; done
+```
+
+### Detect ASUS ROG Strix i2c adapter
 
 Try to figure out which i2c device to use. We're looking for address 0x2a (which is from an ASUS ROG Strix 2070S):
 
