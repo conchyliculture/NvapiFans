@@ -18,6 +18,9 @@ static int percentToHex(int hex) {
 };
 
 NvApiClient::NvApiClient() {
+    // Remove the current directory from the search path for dynamically loaded
+    // DLLs as a precaution.
+    SetDllDirectory(L"");
 
 	#ifdef _WIN64
 		hNvapi = LoadLibrary(L"nvapi64.dll");
